@@ -97,6 +97,16 @@ async function api(pathname, { method = 'GET', token, body } = {}) {
     check('guest POST /api/diary -> 401', guestPost.status === 401);
     const guestConsent = await api('/api/profile/consent');
     check('guest GET consent -> 401', guestConsent.status === 401);
+    const guestHistory = await api('/api/triage/history');
+    check(
+      'guest GET history -> mode guest',
+      guestHistory.status === 200 && guestHistory.json.mode === 'guest' && Array.isArray(guestHistory.json.data) && guestHistory.json.data.length === 0
+    );
+    const guestImport = await api('/api/triage/history/import', {
+      method: 'POST',
+      body: { items: [{ symptomName: 'tes', reasoning: 'tes', urgencyLevel: 'pantau_di_rumah' }] },
+    });
+    check('guest POST history import -> 401', guestImport.status === 401);
 
     // ---------- user A ----------
     userA = await createUser('a');
@@ -104,6 +114,12 @@ async function api(pathname, { method = 'GET', token, body } = {}) {
 
     const profileRow = await db.query('select id, consent_health_data from public.profiles where id = $1', [userA.id]);
     check('trigger handle_new_user membuat profil', profileRow.rowCount === 1 && profileRow.rows[0].consent_health_data === false);
+
+    const historyBeforeConsent = await api('/api/triage/history', { token: tokenA });
+    check(
+      'GET history tanpa consent -> consent_required',
+      historyBeforeConsent.status === 200 && historyBeforeConsent.json.mode === 'consent_required' && historyBeforeConsent.json.data.length === 0
+    );
 
     const consentBefore = await api('/api/profile/consent', { token: tokenA });
     check('GET consent default false', consentBefore.status === 200 && consentBefore.json.data.consentHealthData === false, JSON.stringify(consentBefore.json));
@@ -131,6 +147,48 @@ async function api(pathname, { method = 'GET', token, body } = {}) {
     check('baris symptom_sessions sesuai', dbSession.rowCount === 1 && dbSession.rows[0].user_id === userA.id, JSON.stringify(dbSession.rows[0]));
     const dbCheckin = await db.query('select anxiety_before from public.checkins where session_id = $1', [sessionId]);
     check('check-in awal ikut tersimpan', dbCheckin.rowCount === 1 && dbCheckin.rows[0].anxiety_before === 4, JSON.stringify(dbCheckin.rows));
+
+    const historyWithConsent = await api('/api/triage/history', { token: tokenA });
+    check(
+      'GET history dengan consent -> account',
+      historyWithConsent.status === 200 &&
+        historyWithConsent.json.mode === 'account' &&
+        historyWithConsent.json.data.some((item) => item.id === sessionId)
+    );
+
+    const countBeforeImport = await db.query('select count(*)::int as n from public.symptom_sessions where user_id = $1', [userA.id]);
+    const importRes = await api('/api/triage/history/import', {
+      method: 'POST',
+      token: tokenA,
+      body: {
+        items: [
+          {
+            symptomName: 'sakit kepala (dari perangkat)',
+            duration: '1–2 hari',
+            urgencyLevel: 'pantau_di_rumah',
+            reasoning: 'Keluhan ringan yang tercatat di perangkat ini.',
+            createdAt: new Date().toISOString(),
+            doctorSummary: { summary: 'Ringkasan dari perangkat.', threeQuestionsForDoctor: ['Sejak kapan?'] },
+          },
+        ],
+      },
+    });
+    const importedRow = await db.query(
+      "select urgency_level, rule_floor, red_flag_triggered, answers, created_at from public.symptom_sessions where user_id = $1 and symptoms->>'importedFromDevice' = 'true'",
+      [userA.id]
+    );
+    const countAfterImport = await db.query('select count(*)::int as n from public.symptom_sessions where user_id = $1', [userA.id]);
+    check('POST history import -> 201', importRes.status === 201 && importRes.json.imported === 1, JSON.stringify(importRes.json));
+    check(
+      'impor menyimpan urgensi apa adanya',
+      countAfterImport.rows[0].n === countBeforeImport.rows[0].n + 1 &&
+        importedRow.rowCount === 1 &&
+        importedRow.rows[0].urgency_level === 'monitor' &&
+        importedRow.rows[0].rule_floor === null &&
+        importedRow.rows[0].red_flag_triggered === false &&
+        importedRow.rows[0].created_at <= new Date(Date.now() + 1000),
+      JSON.stringify(importedRow.rows)
+    );
 
     const patchCheckin = await api('/api/checkins', { method: 'PATCH', token: tokenA, body: { sessionId, anxietyAfter: 2 } });
     check('PATCH check-in anxiety_after', patchCheckin.status === 200 && patchCheckin.json.data?.anxiety_after === 2, JSON.stringify(patchCheckin.json));

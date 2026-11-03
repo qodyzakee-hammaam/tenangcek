@@ -8,7 +8,8 @@ import { getAuthHeaders } from '@/lib/supabase/client';
 
 /**
  * Hapus akun (docs/database.md §6).
- * Menghapus auth.users akan meng-cascade seluruh data kesehatan pengguna.
+ * Route server menghapus data kesehatan lewat Prisma, lalu menghapus akun lewat
+ * Supabase Admin; trigger `handle_deleted_user` menjadi jaring pengaman.
  */
 export default function DeleteAccountCard() {
   const { user, signOut } = useAuth();

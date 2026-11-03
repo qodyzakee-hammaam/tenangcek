@@ -23,6 +23,26 @@ export interface SaveTriageInput {
   anxietyBefore: number | null;
 }
 
+export interface TriageHistoryItem {
+  id: string;
+  symptomName: string;
+  duration: string | null;
+  urgencyLevel: UrgencyLevelDb;
+  reasoning: string;
+  createdAt: string;
+  doctorSummary: { summary: string; threeQuestionsForDoctor: string[] } | null;
+}
+
+/** Item yang diimpor dari cache perangkat setelah pengguna memberi persetujuan. */
+export interface ImportTriageItem {
+  symptomName: string;
+  duration: string | null;
+  urgencyLevel: UrgencyLevelDb;
+  reasoning: string;
+  createdAt: string;
+  doctorSummary: { summary: string; threeQuestionsForDoctor: string[] } | null;
+}
+
 export interface SavedTriageSession {
   sessionId: string;
   checkinSaved: boolean;
@@ -68,4 +88,121 @@ export async function saveTriageSession(
   } catch {
     return { sessionId, checkinSaved: false };
   }
+}
+
+/** Ambil nilai string dari kolom JSON tanpa mempercayai bentuknya. */
+function readJsonString(
+  value: Prisma.JsonValue | null | undefined,
+  key: string
+): string | null {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
+  const field = (value as Record<string, Prisma.JsonValue>)[key];
+  return typeof field === 'string' ? field : null;
+}
+
+function readJsonRecord(
+  value: Prisma.JsonValue | null | undefined,
+  key?: string
+): Record<string, Prisma.JsonValue> | null {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
+  const record = value as Record<string, Prisma.JsonValue>;
+  if (!key) return record;
+  const nested = record[key];
+  if (typeof nested !== 'object' || nested === null || Array.isArray(nested)) return null;
+  return nested as Record<string, Prisma.JsonValue>;
+}
+
+function readDoctorSummary(value: Prisma.JsonValue | null | undefined) {
+  const result = readJsonRecord(value);
+  const summary = result ? readJsonRecord(result.doctorSummary) : null;
+  if (!summary || typeof summary.summary !== 'string') return null;
+
+  return {
+    summary: summary.summary,
+    threeQuestionsForDoctor: Array.isArray(summary.threeQuestionsForDoctor)
+      ? summary.threeQuestionsForDoctor.filter((item): item is string => typeof item === 'string')
+      : [],
+  };
+}
+
+/**
+ * Riwayat triage milik pengguna, terbaru lebih dulu.
+ * RLS tetap menegakkan isolasi lewat `withUserContext`.
+ */
+export async function listTriageSessions(
+  userId: string,
+  limit = 20
+): Promise<TriageHistoryItem[]> {
+  const take = Math.min(Math.max(limit, 1), 50);
+
+  const rows = await withUserContext(userId, (tx) =>
+    tx.symptomSession.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take,
+      select: {
+        id: true,
+        symptoms: true,
+        urgencyLevel: true,
+        reasoning: true,
+        createdAt: true,
+        result: true,
+      },
+    })
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    symptomName: readJsonString(row.symptoms, 'mainSymptom') ?? 'Pengecekan gejala',
+    duration: readJsonString(row.symptoms, 'duration'),
+    urgencyLevel: row.urgencyLevel,
+    reasoning: row.reasoning,
+    createdAt: row.createdAt.toISOString(),
+    doctorSummary: readDoctorSummary(row.result),
+  }));
+}
+
+/** Tanggal dari klien tidak boleh di masa depan; jatuh ke waktu sekarang. */
+function safePastDate(value: string): Date {
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) return new Date();
+  const date = new Date(parsed);
+  return date.getTime() > Date.now() ? new Date() : date;
+}
+
+/**
+ * Simpan riwayat dari perangkat ke akun (setelah persetujuan).
+ *
+ * Urgensi disimpan **apa adanya** seperti yang tercatat di perangkat; tidak ada
+ * penurunan level. `red_flag_triggered` diisi konservatif (true untuk darurat)
+ * karena penanda asli tidak tersedia di cache.
+ */
+export async function importTriageSessions(
+  userId: string,
+  items: ImportTriageItem[]
+): Promise<number> {
+  if (items.length === 0) return 0;
+
+  await withUserContext(userId, async (tx) => {
+    await tx.symptomSession.createMany({
+      data: items.map((item) => ({
+        userId,
+        symptoms: {
+          mainSymptom: item.symptomName,
+          duration: item.duration,
+          importedFromDevice: true,
+        },
+        answers: { importedFromDevice: true },
+        urgencyLevel: item.urgencyLevel,
+        reasoning: item.reasoning,
+        nextSteps: [],
+        ruleFloor: null,
+        redFlagTriggered: item.urgencyLevel === 'emergency',
+        result: item.doctorSummary ? { doctorSummary: item.doctorSummary } : {},
+        createdAt: safePastDate(item.createdAt),
+      })),
+    });
+  });
+
+  return items.length;
 }

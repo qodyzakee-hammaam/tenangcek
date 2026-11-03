@@ -1,17 +1,21 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { SymptomPayload, TriageResult, TriageSource } from '@/types/triage';
-import { AlertCircle, ArrowLeft, ArrowRight, HeartPulse, LayoutDashboard, Loader2, MessageCircleHeart, RotateCcw, Sparkles } from 'lucide-react';
+import { AlertCircle, ArrowLeft, ArrowRight, HeartPulse, LayoutDashboard, Loader2, MessageCircleHeart, RotateCcw, Sparkles, X } from 'lucide-react';
 import RedFlagAlert from './RedFlagAlert';
 import ResultCard from '@/components/result/ResultCard';
+import UrgencyBadge from '@/components/result/UrgencyBadge';
 import InteractiveAiChat from './InteractiveAiChat';
 import AnxietyCheckin from '@/components/support/AnxietyCheckin';
 import Chip from '@/components/ui/Chip';
 import Button, { buttonClass } from '@/components/ui/Button';
+import AutoGrowTextarea from '@/components/ui/AutoGrowTextarea';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAuthHeaders } from '@/lib/supabase/client';
+import { mergeHistory, prependLocalHistory, readLocalHistory, type HistoryEntry } from '@/lib/triage/localHistory';
+import { fetchServerHistory } from '@/lib/triage/historyClient';
 
 interface StepQuestion {
   step: number;
@@ -74,7 +78,7 @@ const STEPS: StepQuestion[] = [
 type View = 'form' | 'result' | 'chat';
 
 export default function StepChat() {
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [formData, setFormData] = useState<SymptomPayload>({
     mainSymptom: '',
@@ -88,9 +92,39 @@ export default function StepChat() {
   const [result, setResult] = useState<TriageResult | null>(null);
   const [resultSource, setResultSource] = useState<TriageSource>('rule_based');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [cacheWarning, setCacheWarning] = useState<string | null>(null);
+  const [lastCheck, setLastCheck] = useState<HistoryEntry | null>(null);
+  const [showLastCheck, setShowLastCheck] = useState(true);
   const [view, setView] = useState<View>('form');
 
   const step = STEPS[currentStepIndex];
+
+  // Ringkasan pengecekan terakhir sebagai konteks, bukan pengubah jawaban.
+  // Tunggu status auth selesai agar tidak membaca kunci yang salah. Untuk
+  // pengguna login, riwayat akun di perangkat lain ikut diambil dari server.
+  useEffect(() => {
+    if (isAuthLoading) return;
+
+    let cancelled = false;
+
+    const loadLastCheck = async () => {
+      let entries = mergeHistory(readLocalHistory(user?.id ?? null), readLocalHistory(null));
+
+      if (user) {
+        const result = await fetchServerHistory();
+        if (result?.mode === 'account' && result.items.length > 0) {
+          entries = mergeHistory(result.items, entries);
+        }
+      }
+
+      if (!cancelled) setLastCheck(entries[0] ?? null);
+    };
+
+    void loadLastCheck();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthLoading, user]);
 
   const handleNext = async (customValue?: string) => {
     setErrorMessage(null);
@@ -159,24 +193,28 @@ export default function StepChat() {
       setResultSource(json.meta?.aiSource === 'gemini' ? 'gemini' : 'rule_based');
       setView('result');
 
-      // Riwayat lokal (mode tamu tetap tersedia; tidak menulis ke database).
-      try {
-        const cacheKey = `tenangcek_sessions_${user?.id || 'guest'}`;
-        const existing = JSON.parse(localStorage.getItem(cacheKey) || '[]');
-        const serverSessionId: string | undefined = json.meta?.sessionId;
-        const newHistoryItem = {
-          id: serverSessionId ? `session-${serverSessionId}` : `session-${Date.now()}`,
-          symptomName: payload.mainSymptom,
-          duration: payload.duration || 'Beberapa saat',
-          urgencyLevel: json.data.urgencyLevel,
-          reasoning: json.data.reasoning,
-          createdAt: new Date().toISOString(),
-          doctorSummary: json.data.doctorSummary,
-        };
-        localStorage.setItem(cacheKey, JSON.stringify([newHistoryItem, ...existing]));
-      } catch {
-        // Riwayat lokal bersifat opsional; kegagalan menyimpan tidak menghalangi hasil.
-      }
+      // Riwayat lokal: kunci ditentukan dari identitas yang sudah pasti
+      // (`user?.id` hanya setelah auth selesai), supaya data akun tidak pernah
+      // tertulis ke kunci tamu dan sebaliknya.
+      const historyEntry: HistoryEntry = {
+        id: json.meta?.sessionId ? `session-${json.meta.sessionId}` : `local-${Date.now()}`,
+        sessionId: json.meta?.sessionId,
+        symptomName: payload.mainSymptom,
+        duration: payload.duration || 'Beberapa saat',
+        urgencyLevel: json.data.urgencyLevel,
+        reasoning: json.data.reasoning,
+        createdAt: new Date().toISOString(),
+        doctorSummary: json.data.doctorSummary ?? null,
+      };
+
+      const cacheSaved = prependLocalHistory(user?.id ?? null, historyEntry);
+      setLastCheck(historyEntry);
+      setShowLastCheck(true);
+      setCacheWarning(
+        cacheSaved
+          ? null
+          : 'Riwayat pengecekan belum bisa disimpan di perangkat ini. Hasil tetap bisa dilihat sekarang, tetapi mungkin tidak muncul di dashboard.'
+      );
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Terjadi gangguan jaringan.';
       setErrorMessage(`${message} Coba lagi, atau periksa ke puskesmas bila keluhan berlanjut.`);
@@ -210,10 +248,10 @@ export default function StepChat() {
 
   if (result && view === 'result') {
     return (
-      <div className="min-h-screen bg-canvas pb-12">
+      <div className="min-h-dvh bg-canvas pb-[calc(3rem+env(safe-area-inset-bottom))]">
         <header className="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur">
-          <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
-            <Link href="/dashboard" className="flex items-center gap-2 text-sm font-medium text-ink-600 hover:text-ink-900">
+          <div className="mx-auto flex h-14 max-w-2xl items-center justify-between gap-3 px-4">
+            <Link href="/dashboard" className="flex min-h-10 items-center gap-2 text-sm font-medium text-ink-600 hover:text-ink-900">
               <ArrowLeft className="h-4 w-4" aria-hidden="true" />
               Riwayat
             </Link>
@@ -249,32 +287,42 @@ export default function StepChat() {
 
           <p className="mt-3 text-center text-xs leading-5 text-ink-400">
             {user
-              ? 'Hasil dan riwayat tersimpan di browser perangkat ini.'
+              ? 'Hasil dan riwayat tersimpan di akunmu bila izin penyimpanan aktif, dan selalu tersalin ke perangkat ini.'
               : 'Mode tamu: hasil hanya tersimpan di browser perangkat ini dan tidak ditulis ke database.'}
           </p>
+
+          {cacheWarning && (
+            <p
+              role="status"
+              className="mt-3 flex items-start gap-2 rounded-control border border-border bg-surface p-3 text-xs leading-5 text-ink-600"
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-urgency-urgent" aria-hidden="true" />
+              <span>{cacheWarning}</span>
+            </p>
+          )}
         </main>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-canvas">
+    <div className="flex min-h-dvh flex-col bg-canvas">
       <header className="sticky top-0 z-40 w-full shrink-0 border-b border-border bg-surface/95 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
-          <Link href="/dashboard" className="flex items-center gap-2 transition hover:opacity-80">
+        <div className="mx-auto flex h-14 max-w-2xl items-center justify-between gap-3 px-4">
+          <Link href="/dashboard" className="flex min-h-10 items-center gap-2 transition hover:opacity-80">
             <span className="flex h-8 w-8 items-center justify-center rounded-control bg-brand-600 text-white">
               <HeartPulse className="h-4 w-4" aria-hidden="true" />
             </span>
             <span className="text-sm font-bold text-ink-900">TenangCek</span>
           </Link>
-          <Link href="/dashboard" className="flex items-center gap-1.5 text-xs font-medium text-ink-600 transition hover:text-ink-900">
+          <Link href="/dashboard" className="flex min-h-10 items-center gap-1.5 text-xs font-medium text-ink-600 transition hover:text-ink-900">
             <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
             Riwayat
           </Link>
         </div>
       </header>
 
-      <main className="flex flex-1 items-start justify-center px-4 py-8">
+      <main className="flex flex-1 items-start justify-center px-4 py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:py-8">
         <div className="w-full max-w-xl space-y-5">
           <div className="text-center">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-600">
@@ -288,6 +336,47 @@ export default function StepChat() {
               Jawab satu pertanyaan per langkah. TenangCek membantu memutuskan langkah berikutnya, bukan menebak penyakit.
             </p>
           </div>
+
+          {showLastCheck && lastCheck && (
+            <section
+              aria-label="Pengecekan terakhir"
+              className="rounded-card border border-border bg-surface p-4 sm:p-5"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-brand-600">
+                    Pengecekan terakhir
+                  </p>
+                  <p className="mt-1 break-words text-sm font-semibold text-ink-900">{lastCheck.symptomName}</p>
+                  <p className="mt-1 text-xs leading-5 text-ink-400">
+                    {new Date(lastCheck.createdAt).toLocaleDateString('id-ID', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })}{' '}
+                    · {lastCheck.duration || 'Durasi tidak dicatat'}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <UrgencyBadge level={lastCheck.urgencyLevel} size="sm" />
+                  <button
+                    type="button"
+                    onClick={() => setShowLastCheck(false)}
+                    aria-label="Tutup ringkasan pengecekan terakhir"
+                    className="flex h-9 w-9 items-center justify-center rounded-control text-ink-400 transition hover:bg-canvas hover:text-ink-900"
+                  >
+                    <X className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
+              <Link
+                href="/dashboard"
+                className="mt-3 inline-flex min-h-9 items-center gap-1.5 text-xs font-semibold text-brand-600 hover:underline"
+              >
+                Lihat semua riwayat <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+              </Link>
+            </section>
+          )}
 
           <section className="rounded-card border border-border bg-surface p-5 shadow-sm sm:p-6">
             {/* Progres: teks + bar tipis */}
@@ -351,19 +440,20 @@ export default function StepChat() {
                 <label htmlFor="symptom-input" className="mb-1.5 block text-xs font-semibold text-ink-600">
                   Atau tulis sendiri
                 </label>
-                <input
+                <AutoGrowTextarea
                   id="symptom-input"
-                  type="text"
                   value={textInput}
                   onChange={(event) => setTextInput(event.target.value)}
                   onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
+                    // Enter mengirim jawaban; Shift+Enter menambah baris baru.
+                    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
                       event.preventDefault();
                       void handleNext();
                     }
                   }}
+                  maxHeight={132}
                   placeholder={step.step === 1 ? 'Contoh: kepala terasa berat sejak pagi' : 'Tulis jawabanmu di sini'}
-                  className="w-full rounded-control border border-border bg-surface px-4 py-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-50"
+                  className="w-full rounded-control border border-border bg-surface px-4 py-3 text-base leading-6 text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-50 sm:text-sm"
                 />
               </div>
             )}
@@ -375,7 +465,7 @@ export default function StepChat() {
               </p>
             )}
 
-            <div className="flex items-center justify-between gap-2 border-t border-border pt-4">
+            <div className="sticky bottom-0 z-10 -mx-5 -mb-5 flex flex-wrap items-center justify-between gap-2 rounded-b-card border-t border-border bg-surface px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 sm:-mx-6 sm:-mb-6 sm:px-6 sm:pb-6">
               <button
                 type="button"
                 onClick={handleBack}
@@ -396,7 +486,7 @@ export default function StepChat() {
                     Lewati
                   </button>
                 )}
-                <Button onClick={() => void handleNext()} disabled={isLoading}>
+                <Button onClick={() => void handleNext()} disabled={isLoading || isAuthLoading}>
                   {isLoading ? (
                     <>
                       <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />

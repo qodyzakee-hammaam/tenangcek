@@ -1,5 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getGeminiClient } from '@/lib/gemini/client';
+import {
+  TRIAGE_BUDGET,
+  TRIAGE_MODEL_LADDER,
+  attemptTimeout,
+  availableModels,
+  cooldownError,
+  markModelFailed,
+  markModelHealthy,
+} from '@/lib/gemini/resilience';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -75,7 +84,6 @@ export async function POST(request: Request) {
 
     if (isApiKeyConfigured) {
       try {
-        const client = getGeminiClient();
         const chatTranscript = (messages || [])
           .map((m) => `${m.role === 'user' ? 'Pasien' : 'Asisten'}: ${m.content}`)
           .join('\n');
@@ -106,19 +114,13 @@ Rangkum seluruh keluhan, riwayat onset, faktor pencetus/pereda, serta kekhawatir
 Output HARUS JSON murni tanpa markdown pembungkus.
 `;
 
-        const response = await client.models.generateContent({
-          model: 'gemini-flash-latest',
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          config: {
-            responseMimeType: 'application/json',
-            temperature: 0.2,
-          },
-        });
-
-        const raw = response.text || '{}';
-        parsedResult = JSON.parse(raw);
+        const response = await requestLetterJson(prompt);
+        if (response) parsedResult = JSON.parse(response);
       } catch (err) {
-        console.warn('Gagal generate surat via Gemini live, beralih ke engine lokal:', err);
+        // Log hanya jenis error: tidak boleh memuat isi percakapan (AGENTS.md §2.12).
+        console.warn(
+          `Gemini surat tidak tersedia (${err instanceof Error ? err.name : 'unknown'}), memakai engine lokal.`
+        );
       }
     }
 
@@ -173,6 +175,45 @@ Output HARUS JSON murni tanpa markdown pembungkus.
       { status: 500 }
     );
   }
+}
+
+/**
+ * Minta JSON surat dokter dengan model cadangan.
+ * Model pertama yang sedang kehabisan kuota/kelebihan beban dilewati cepat,
+ * sehingga surat tetap bisa dibuat tanpa menunggu lama.
+ */
+async function requestLetterJson(prompt: string): Promise<string | null> {
+  const client = getGeminiClient();
+  const deadline = Date.now() + TRIAGE_BUDGET.totalMs;
+  const models = availableModels(TRIAGE_MODEL_LADDER);
+
+  if (models.length === 0) throw cooldownError();
+
+  for (let index = 0; index < models.length; index += 1) {
+    const model = models[index];
+    const timeoutMs = attemptTimeout(TRIAGE_BUDGET, deadline, index === models.length - 1);
+    if (timeoutMs === null) break;
+
+    const startedAt = Date.now();
+    try {
+      const response = await client.models.generateContent({
+        model,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: {
+          responseMimeType: 'application/json',
+          temperature: 0.2,
+          abortSignal: AbortSignal.timeout(timeoutMs),
+        },
+      });
+
+      markModelHealthy(model);
+      return response.text || null;
+    } catch (error) {
+      markModelFailed(model, error, Date.now() - startedAt);
+    }
+  }
+
+  return null;
 }
 
 function generateFallbackDoctorLetter(

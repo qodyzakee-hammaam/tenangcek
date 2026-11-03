@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase/client';
+import { clearAccountHistories, clearAccountLetters } from '@/lib/triage/localHistory';
 import { UserProfile } from '@/types/user';
 
 interface AuthContextType {
@@ -67,13 +68,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // 2. Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user.id);
       } else {
         setProfile(null);
+        // Sesi bisa berakhir tanpa menekan tombol keluar (token kedaluwarsa,
+        // logout dari tab lain). Jejak lokal milik akun tetap harus dibersihkan.
+        if (event === 'SIGNED_OUT') {
+          clearAccountHistories();
+          clearAccountLetters();
+        }
       }
       setIsLoading(false);
     });
@@ -118,6 +125,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    // Jejak riwayat milik akun di perangkat ini ikut dibersihkan agar tidak
+    // terlihat lagi setelah logout (termasuk setelah refresh). Kunci tamu
+    // tidak disentuh karena bukan milik akun siapa pun.
+    clearAccountHistories();
+    clearAccountLetters();
     setUser(null);
     setSession(null);
     setProfile(null);

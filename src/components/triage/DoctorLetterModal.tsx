@@ -17,6 +17,8 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { DoctorLetterData } from '@/app/api/chat/letter/route';
+import { useAuth } from '@/contexts/AuthContext';
+import { lettersKey } from '@/lib/triage/localHistory';
 
 interface Props {
   letter: DoctorLetterData;
@@ -25,6 +27,7 @@ interface Props {
 
 export default function DoctorLetterModal({ letter, onClose }: Props) {
   const router = useRouter();
+  const { user } = useAuth();
   const [copied, setCopied] = useState(false);
 
   const getUrgencyBadge = (urgency: string) => {
@@ -90,11 +93,13 @@ ${letter.doctorNoteClosing}
   };
 
   const handleSaveAndDashboard = () => {
-    // Simpan ringkasan surat ke riwayat sesi jika diperlukan
+    // Simpan ringkasan surat ke riwayat sesi jika diperlukan. Kunci di-scope
+    // per akun agar catatan kesehatan tidak terlihat setelah logout.
     try {
-      const cacheKey = `tenangcek_doctor_letters`;
+      const cacheKey = lettersKey(user?.id ?? null);
       const existing = JSON.parse(localStorage.getItem(cacheKey) || '[]');
-      localStorage.setItem(cacheKey, JSON.stringify([letter, ...existing]));
+      const entries = Array.isArray(existing) ? existing : [];
+      localStorage.setItem(cacheKey, JSON.stringify([letter, ...entries]));
     } catch (e) {
       console.warn('Gagal menyimpan surat ke cache', e);
     }

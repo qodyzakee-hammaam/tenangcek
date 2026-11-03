@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ChatStep } from '@/types/triage';
-import { getGeminiClient } from '@/lib/gemini/client';
+import { openChatStream } from '@/lib/gemini/chatStream';
+import { GeminiUnavailableError } from '@/lib/gemini/resilience';
 import { buildChatSystemInstruction } from '@/lib/gemini/prompts';
 
 interface ChatMessage {
@@ -100,7 +101,6 @@ export async function POST(request: Request) {
     // 1. Jika API Key Gemini sudah terpasang, panggil Gemini API
     if (isApiKeyConfigured) {
       try {
-        const client = getGeminiClient();
         const systemInstruction = buildChatSystemInstruction(triageContext);
 
         // Format riwayat chat untuk Gemini SDK
@@ -115,28 +115,42 @@ export async function POST(request: Request) {
           },
         ];
 
-        const responseStream = await client.models.generateContentStream({
-          model: 'gemini-3.6-flash',
+        // Daftar model cadangan + batas waktu ditangani di openChatStream:
+        // 503 "high demand" pada satu model tidak lagi menggagalkan percakapan.
+        const { model, stream: textStream } = await openChatStream({
           contents,
-          config: {
-            systemInstruction,
-            temperature: 0.6,
-          },
+          systemInstruction,
+          temperature: 0.6,
         });
 
         const encoder = new TextEncoder();
         const stream = new ReadableStream<Uint8Array>({
           async start(controller) {
             try {
-              for await (const chunk of responseStream) {
-                if (chunk.text) controller.enqueue(encoder.encode(chunk.text));
+              for await (const text of textStream) {
+                controller.enqueue(encoder.encode(text));
               }
               controller.close();
             } catch (streamError) {
-              console.error('Gemini chat stream error:', streamError);
-              controller.enqueue(encoder.encode('\n\nMaaf, koneksi AI terputus sebelum jawaban selesai. Silakan coba lagi.'));
+              // Log hanya status/jenis: tidak boleh memuat isi percakapan
+              // (AGENTS.md §2.12).
+              console.warn(
+                `Gemini chat terputus: model=${model} jenis=${
+                  streamError instanceof Error ? streamError.name : 'unknown'
+                }`
+              );
+              controller.enqueue(
+                encoder.encode(
+                  '\n\nMaaf, jawaban terputus di tengah jalan. Silakan kirim ulang pertanyaan Anda.'
+                )
+              );
               controller.close();
             }
+          },
+          cancel() {
+            // Klien menutup koneksi: hentikan stream upstream agar tidak terus
+            // memakai kuota Gemini untuk jawaban yang tidak dibaca siapa pun.
+            void textStream.return(undefined);
           },
         });
 
@@ -145,31 +159,44 @@ export async function POST(request: Request) {
             'Content-Type': 'text/plain; charset=utf-8',
             'Cache-Control': 'no-cache, no-transform',
             'X-AI-Provider': 'gemini',
+            'X-AI-Model': model,
           },
         });
       } catch (geminiError) {
-        console.warn('Gagal memanggil Gemini API live, beralih ke Fallback Asisten Medis TenangCek:', geminiError);
+        // Log hanya status, tanpa isi pesan pengguna (AGENTS.md §2.12).
+        const status =
+          geminiError instanceof GeminiUnavailableError
+            ? (geminiError.status ?? 'cooldown')
+            : 'tidak diketahui';
+        console.warn(`Gemini chat tidak tersedia (status: ${status}), memakai mode cadangan.`);
+
         // Fallback cerdas jika ada kendala jaringan / kuota
         const fallbackReply = generateFallbackChatReply(userPrompt, triageContext);
-        return new Response(`${fallbackReply}\n\n*(Catatan: Menggunakan mode cadangan cerdas karena kuota/koneksi Gemini sedang dialihkan)*`, {
-          headers: {
-            'Content-Type': 'text/plain; charset=utf-8',
-            'Cache-Control': 'no-cache, no-transform',
-            'X-AI-Provider': 'fallback',
-          },
-        });
+        return new Response(
+          `${fallbackReply}\n\n*(Catatan: asisten AI sedang sibuk, jadi jawaban ini disusun dari panduan edukasi TenangCek.)*`,
+          {
+            headers: {
+              'Content-Type': 'text/plain; charset=utf-8',
+              'Cache-Control': 'no-cache, no-transform',
+              'X-AI-Provider': 'fallback',
+            },
+          }
+        );
       }
     }
 
     // 2. Jika API Key belum dikonfigurasi, gunakan Asisten Cerdas TenangCek (Simulasi Handal)
     const fallbackReply = generateFallbackChatReply(userPrompt, triageContext);
-    return new Response(`${fallbackReply}\n\n*(💡 Mode Edukasi Interaktif TenangCek. Untuk menghubungkan ke kecerdasan Gemini AI secara penuh, masukkan GEMINI_API_KEY di file .env)*`, {
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'Cache-Control': 'no-cache, no-transform',
-        'X-AI-Provider': 'fallback',
-      },
-    });
+    return new Response(
+      `${fallbackReply}\n\n*(Catatan: mode edukasi TenangCek. Jawaban disusun dari panduan internal, bukan diagnosis dokter.)*`,
+      {
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Cache-Control': 'no-cache, no-transform',
+          'X-AI-Provider': 'fallback',
+        },
+      }
+    );
   } catch (error) {
     console.error('API /api/chat error:', error);
     return NextResponse.json(

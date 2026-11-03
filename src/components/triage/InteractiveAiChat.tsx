@@ -27,6 +27,7 @@ import {
 import DoctorLetterModal from './DoctorLetterModal';
 import BreathingExercise from '../calm/BreathingExercise';
 import RedFlagAlert from './RedFlagAlert';
+import AutoGrowTextarea from '../ui/AutoGrowTextarea';
 import { PRIMARY_EMERGENCY_CONTACT } from '@/content/emergency';
 import { DoctorLetterData } from '@/app/api/chat/letter/route';
 
@@ -108,12 +109,15 @@ export default function InteractiveAiChat({ result, formData, onReset }: Props) 
   const [doctorLetter, setDoctorLetter] = useState<DoctorLetterData | null>(null);
   const [showBreathing, setShowBreathing] = useState(false);
   const [isLiveGemini, setIsLiveGemini] = useState<boolean | null>(null);
+  const [aiModel, setAiModel] = useState<string | null>(null);
   const [sidebarTab, setSidebarTab] = useState<'triase' | 'napas'>('triase');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const meta = URGENCY_CONFIG[result.urgencyLevel] ?? URGENCY_CONFIG.pantau_di_rumah;
+  // Nama model mengikuti header dari server, bukan versi yang di-hardcode.
+  const modelLabel = aiModel ? (/lite/i.test(aiModel) ? 'Gemini Flash Lite' : 'Gemini Flash') : 'Gemini';
 
   // Pesan sambutan awal
   useEffect(() => {
@@ -188,6 +192,7 @@ Silakan tanyakan apa saja yang masih membuat Anda khawatir. Setelah selesai, kli
 
       const isGemini = res.headers.get('x-ai-provider') === 'gemini';
       setIsLiveGemini(isGemini);
+      setAiModel(res.headers.get('x-ai-model'));
       if (!res.body) throw new Error('Respons AI kosong');
 
       const assistantId = `msg-${Date.now()}-ai`;
@@ -470,7 +475,7 @@ Silakan tanyakan apa saja yang masih membuat Anda khawatir. Setelah selesai, kli
               {/* Engine info */}
               <div className="text-[11px] text-ink-400 flex items-center gap-1.5">
                 <Sparkles className="h-3 w-3 text-brand-500" />
-                {isLiveGemini === true ? 'Powered by Gemini 3.6 Flash' : isLiveGemini === false ? 'AI Health Engine (fallback)' : 'TenangCek AI'}
+                {isLiveGemini === true ? `Powered by ${modelLabel}` : isLiveGemini === false ? 'AI Health Engine (fallback)' : 'TenangCek AI'}
               </div>
             </div>
           ) : (
@@ -516,7 +521,8 @@ Silakan tanyakan apa saja yang masih membuat Anda khawatir. Setelah selesai, kli
           <div className="flex items-center gap-3 min-w-0">
             <Link
               href="/dashboard"
-              className="flex lg:hidden items-center justify-center h-8 w-8 rounded-lg border border-border text-ink-400 hover:bg-canvas transition shrink-0"
+              aria-label="Kembali ke dashboard"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border text-ink-400 transition hover:bg-canvas lg:hidden"
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
@@ -539,7 +545,7 @@ Silakan tanyakan apa saja yang masih membuat Anda khawatir. Setelah selesai, kli
                 <p className="text-[11px] text-ink-400 truncate">
                   {formData.mainSymptom} • {formData.severity ?? 'sedang'} •{' '}
                   <span className="text-brand-600 font-semibold">
-                    {isLiveGemini ? 'Gemini 3.6 Flash' : 'AI Engine'}
+                    {isLiveGemini ? modelLabel : 'AI Engine'}
                   </span>
                 </p>
               </div>
@@ -639,56 +645,73 @@ Silakan tanyakan apa saja yang masih membuat Anda khawatir. Setelah selesai, kli
         </div>
 
         {/* ── Quick Chips ── */}
-        <div className="border-t border-border bg-surface px-4 py-2 overflow-x-auto shrink-0">
-          <div className="flex items-center gap-2 whitespace-nowrap">
-            <span className="text-[11px] font-bold text-ink-400 shrink-0 flex items-center gap-1">
-              <Sparkles className="h-3 w-3 text-brand-500" />
-              Tanya cepat:
-            </span>
-            {SUGGESTED_QUESTIONS.map((q, i) => (
-              <button
-                key={i}
-                type="button"
-                disabled={isLoading}
-                onClick={() => handleSendMessage(q)}
-                className="shrink-0 rounded-full border border-border bg-canvas px-3 py-1 text-[11px] font-medium text-ink-600 hover:border-brand-500/50 hover:bg-brand-50 hover:text-brand-600 disabled:opacity-50 transition"
-              >
-                {q}
-              </button>
-            ))}
+        <div className="relative shrink-0 border-t border-border bg-surface">
+          <div className="overflow-x-auto overscroll-x-contain px-4 py-2 [scrollbar-width:thin]">
+            <div className="flex items-center gap-2 whitespace-nowrap">
+              <span className="flex shrink-0 items-center gap-1 text-[11px] font-bold text-ink-400">
+                <Sparkles className="h-3 w-3 text-brand-500" />
+                Tanya cepat:
+              </span>
+              {SUGGESTED_QUESTIONS.map((q, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => handleSendMessage(q)}
+                  className="min-h-9 shrink-0 rounded-full border border-border bg-canvas px-3 py-1 text-[11px] font-medium text-ink-600 transition hover:border-brand-500/50 hover:bg-brand-50 hover:text-brand-600 disabled:opacity-50"
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
         {/* ── Input Bar ── */}
         <form
           onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
-          className="border-t border-border bg-surface px-4 py-3 shrink-0"
+          className="shrink-0 border-t border-border bg-surface px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
         >
-          <div className="flex items-center gap-2">
-            <input
+          <div className="flex items-end gap-2">
+            <AutoGrowTextarea
               ref={inputRef}
-              type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={(e) => {
+                // Enter mengirim; Shift+Enter menambah baris baru.
+                if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                  e.preventDefault();
+                  void handleSendMessage();
+                }
+              }}
               disabled={isLoading}
+              maxHeight={160}
+              aria-label="Tulis pertanyaan untuk TenangCek AI"
               placeholder="Tanyakan keluhan Anda (misal: boleh minum es? kapan harus periksa?)..."
-              className="flex-1 rounded-card border border-border bg-canvas px-4 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand-50 disabled:opacity-60 transition"
+              className="min-h-11 min-w-0 flex-1 rounded-card border border-border bg-canvas px-4 py-2.5 text-base leading-6 text-ink-900 transition placeholder:text-ink-400 focus:border-brand-500 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand-50 disabled:opacity-60 sm:text-sm"
             />
             <button
               type="submit"
               disabled={isLoading || !inputText.trim()}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card bg-brand-500 text-white hover:bg-brand-500 disabled:opacity-40 transition shadow-sm"
+              aria-label="Kirim pesan"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-card bg-brand-500 text-white shadow-sm transition hover:bg-brand-500 disabled:opacity-40"
             >
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </button>
           </div>
 
-          <div className="mt-2 flex items-center justify-between text-[11px] text-ink-400 px-1">
-            <span>Tekan <strong>Enter</strong> untuk kirim</span>
+          <div className="mt-2 flex items-center justify-between gap-2 px-1 text-[11px] text-ink-400">
+            <span>
+              <strong>Enter</strong> kirim
+              <span className="hidden sm:inline">
+                {' · '}
+                <strong>Shift+Enter</strong> baris baru
+              </span>
+            </span>
             <button
               type="button"
               onClick={onReset}
-              className="hover:text-ink-600 transition flex items-center gap-1"
+              className="flex items-center gap-1 transition hover:text-ink-600"
             >
               <RotateCcw className="h-3 w-3" />
               Reset Gejala

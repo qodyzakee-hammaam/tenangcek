@@ -67,8 +67,10 @@ export async function POST(request: Request) {
         // (AGENTS.md §2.12). Fallback rule-based tetap aman karena urgensi
         // akhir ditentukan safety layer.
         const status = geminiError instanceof GeminiUnavailableError ? geminiError.status : null;
+        const attempts = geminiError instanceof GeminiUnavailableError ? geminiError.attempts : null;
+        const reason = attempts === 0 ? 'cooldown' : (status ?? 'tidak diketahui');
         console.error(
-          `Gemini tidak tersedia (status: ${status ?? 'tidak diketahui'}), memakai fallback rule-based.`
+          `Gemini tidak tersedia (${reason}, percobaan: ${attempts ?? 'tidak diketahui'}), memakai fallback rule-based.`
         );
         aiTriageResult = createFallbackTriageResult(payload);
       }
