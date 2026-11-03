@@ -101,5 +101,14 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ```
 *(Catatan: Jika `GEMINI_API_KEY` belum diisi, TenangCek sudah dilengkapi **fallback engine cerdas** sehingga alur cek gejala dan red flag tetap dapat diuji coba sepenuhnya tanpa kendala).*
 
-### 3. Setup Database Supabase (Opsional)
-Jalankan isi file [schema.sql](file:///c:/Users/Faishal%20Pratama/KesehatanKu/supabase/schema.sql) pada **SQL Editor** di dashboard Supabase Anda untuk membuat 4 tabel dengan proteksi *Row Level Security (RLS)*.
+### 3. Setup Database (Prisma + Supabase)
+
+Database dikelola oleh **Prisma Migrate**. Tambahkan juga `DATABASE_URL` (pooler) dan `DIRECT_URL` (koneksi langsung) dari *Project Settings → Database*, lalu jalankan:
+
+```bash
+npm run db:deploy     # menerapkan semua migrasi (tabel, RLS, trigger)
+npm run prisma:generate
+```
+
+Untuk pengembangan skema: ubah `prisma/schema.prisma`, lalu `npm run db:migrate`.
+RLS, trigger, dan CHECK constraint tetap ada di `prisma/migrations/` (ditulis tangan).
