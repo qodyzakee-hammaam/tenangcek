@@ -11,7 +11,7 @@ export const RED_FLAG_RULES: RedFlagRule[] = [
     keywords: ['nyeri dada', 'dada tertekan', 'dada sakit menjalar', 'sesak dan dada'],
     description: 'Nyeri dada hebat seperti tertekan atau menjalar ke leher/lengan/punggung.',
     severity: 'darurat',
-    action: 'Segera ke IGD terdekat atau hubungi ambulans (119). Jangan menyetir sendiri.',
+    action: 'Segera ke IGD terdekat. Jangan menyetir sendiri.',
   },
   {
     id: 'severe_breathlessness',

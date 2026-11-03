@@ -15,7 +15,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id">
-      <body className="flex min-h-screen flex-col bg-[#f7f8f3] antialiased selection:bg-lime-200 selection:text-emerald-950">
+      <body className="flex min-h-screen flex-col bg-canvas text-ink-900 antialiased">
         <AuthProvider>
           <ShellLayout>
             {children}

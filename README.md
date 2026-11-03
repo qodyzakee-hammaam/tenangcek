@@ -1,7 +1,7 @@
 # TenangCek 🌿 — AI Health Triage Companion
 
 > **"Bantu user memutuskan langkah berikutnya dengan tenang, bukan menebak penyakit."**  
-> Proyek Interaksi Manusia dan Komputer (IMK) — Solusi untuk mengatasi kecemasan akibat *self-diagnosis* di internet (*cyberchondria*).
+> Proyek Interaksi Manusia dan Komputer (IMK) — Solusi untuk mengatasi kecemasan akibat _self-diagnosis_ di internet (_cyberchondria_).
 
 ---
 
@@ -14,8 +14,8 @@
    - 🔵 **Terjadwal**: Perlu dicek tetapi tidak mendesak → Buat janji dalam beberapa hari.
    - 🟢 **Pantau di Rumah**: Kondisi ringan → Perawatan mandiri dan pantau eskalasi.
 3. **Understand (Pahami Alasannya)**: Alasan singkat dan kemungkinan umum yang lazim terlebih dahulu (bukan penyakit seram).
-4. **Act (Ambil Langkah)**: 1-3 tindakan konkret, ringkasan gejala siap salin untuk dokter, dan latihan napas (*Calm Support*).
-5. **Track (Pantau Perkembangan)**: *Symptom Diary* harian untuk memantau perbaikan atau pengingat eskalasi ke dokter.
+4. **Act (Ambil Langkah)**: 1-3 tindakan konkret, ringkasan gejala siap salin untuk dokter, dan latihan napas (_Calm Support_).
+5. **Track (Pantau Perkembangan)**: _Symptom Diary_ harian untuk memantau perbaikan atau pengingat eskalasi ke dokter.
 
 ---
 
@@ -84,12 +84,15 @@ KesehatanKu/
 ## 🚀 Cara Menjalankan
 
 ### 1. Jalankan Development Server
+
 ```bash
 npm run dev
 ```
+
 Buka browser di [http://localhost:3000](http://localhost:3000).
 
 ### 2. Konfigurasi Variabel Lingkungan (`.env.local`)
+
 ```env
 # Supabase (Frontend & Backend)
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
@@ -99,11 +102,12 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 GEMINI_API_KEY=your_gemini_api_key_here
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ```
-*(Catatan: Jika `GEMINI_API_KEY` belum diisi, TenangCek sudah dilengkapi **fallback engine cerdas** sehingga alur cek gejala dan red flag tetap dapat diuji coba sepenuhnya tanpa kendala).*
+
+_(Catatan: Jika `GEMINI_API_KEY` belum diisi, TenangCek sudah dilengkapi **fallback engine cerdas** sehingga alur cek gejala dan red flag tetap dapat diuji coba sepenuhnya tanpa kendala)._
 
 ### 3. Setup Database (Prisma + Supabase)
 
-Database dikelola oleh **Prisma Migrate**. Tambahkan juga `DATABASE_URL` (pooler) dan `DIRECT_URL` (koneksi langsung) dari *Project Settings → Database*, lalu jalankan:
+Database dikelola oleh **Prisma Migrate**. Tambahkan juga `DATABASE_URL` (pooler) dan `DIRECT_URL` (koneksi langsung) dari _Project Settings → Database_, lalu jalankan:
 
 ```bash
 npm run db:deploy     # menerapkan semua migrasi (tabel, RLS, trigger)

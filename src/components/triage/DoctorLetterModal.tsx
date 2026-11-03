@@ -30,14 +30,14 @@ export default function DoctorLetterModal({ letter, onClose }: Props) {
   const getUrgencyBadge = (urgency: string) => {
     switch (urgency) {
       case 'darurat':
-        return 'bg-rose-600 text-white border-rose-700';
+        return 'bg-urgency-emergency text-white border-urgency-emergency-fg';
       case 'segera':
-        return 'bg-amber-600 text-white border-amber-700';
+        return 'bg-urgency-urgent text-white border-urgency-urgent';
       case 'terjadwal':
-        return 'bg-blue-600 text-white border-blue-700';
+        return 'bg-urgency-scheduled text-white border-urgency-scheduled';
       case 'pantau_di_rumah':
       default:
-        return 'bg-emerald-600 text-white border-emerald-700';
+        return 'bg-brand-500 text-white border-brand-600';
     }
   };
 
@@ -102,20 +102,20 @@ ${letter.doctorNoteClosing}
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-6 backdrop-blur-sm overflow-y-auto print:p-0 print:bg-white print:static print:inset-auto">
-      <div className="relative w-full max-w-3xl rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] print:max-h-none print:shadow-none print:border-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/60 p-3 sm:p-6 backdrop-blur-sm overflow-y-auto print:p-0 print:bg-surface print:static print:inset-auto">
+      <div className="relative w-full max-w-3xl rounded-card bg-surface shadow-2xl border border-border overflow-hidden flex flex-col max-h-[92vh] print:max-h-none print:shadow-none print:border-none">
         
         {/* Modal Top Bar (Hidden saat di-print) */}
-        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-6 py-3.5 print:hidden">
+        <div className="flex items-center justify-between border-b border-border bg-canvas/80 px-6 py-3.5 print:hidden">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-xs">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500 text-white shadow-xs">
               <FileText className="h-4 w-4" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-slate-800">
+              <h2 className="text-sm font-bold text-ink-900">
                 Surat Bahan Bacaan Dokter Pemeriksa
               </h2>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-ink-400">
                 Dokumen ringkasan anamnesis & keluhan untuk dibawa ke klinik / faskes
               </p>
             </div>
@@ -125,16 +125,16 @@ ${letter.doctorNoteClosing}
             <button
               type="button"
               onClick={handlePrint}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 transition"
+              className="flex items-center gap-1.5 rounded-control border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-ink-600 shadow-2xs hover:bg-canvas transition"
               title="Cetak atau Simpan sebagai PDF"
             >
-              <Printer className="h-3.5 w-3.5 text-slate-500" />
+              <Printer className="h-3.5 w-3.5 text-ink-400" />
               <span className="hidden sm:inline">Cetak / PDF</span>
             </button>
             <button
               type="button"
               onClick={handleCopy}
-              className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-emerald-700 transition"
+              className="flex items-center gap-1.5 rounded-control bg-brand-500 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-brand-500 transition"
             >
               {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
               <span>{copied ? 'Tersalin!' : 'Salin Teks'}</span>
@@ -142,7 +142,7 @@ ${letter.doctorNoteClosing}
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-200/60 hover:text-slate-700 transition"
+              className="rounded-control p-1.5 text-ink-400 hover:bg-canvas hover:text-ink-600 transition"
               title="Tutup Modal"
             >
               <X className="h-5 w-5" />
@@ -151,30 +151,30 @@ ${letter.doctorNoteClosing}
         </div>
 
         {/* Isi Surat Medis (Print-Ready) */}
-        <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 text-slate-800 bg-white print:p-0">
+        <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 text-ink-900 bg-surface print:p-0">
           
           {/* KOP SURAT MEDIS RESMI */}
-          <div className="border-b-2 border-slate-800 pb-5">
+          <div className="border-b-2 border-ink-900 pb-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm print:border print:border-emerald-700">
+                <div className="flex h-12 w-12 items-center justify-center rounded-card bg-brand-500 text-white shadow-sm print:border print:border-brand-600">
                   <HeartPulse className="h-7 w-7" />
                 </div>
                 <div>
-                  <span className="text-xs font-extrabold uppercase tracking-widest text-emerald-700 block">
+                  <span className="text-xs font-extrabold uppercase tracking-widest text-brand-600 block">
                     TenangCek Clinical Triage
                   </span>
-                  <h1 className="text-lg sm:text-xl font-black tracking-tight text-slate-900">
+                  <h1 className="text-lg sm:text-xl font-black tracking-tight text-ink-900">
                     LEMBAR CATATAN KELUHAN PASIEN
                   </h1>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-[11px] text-ink-400">
                     Bahan Bacaan & Anamnesis Awal untuk Dokter Pemeriksa di Faskes
                   </p>
                 </div>
               </div>
 
-              <div className="text-right text-[11px] text-slate-600 space-y-0.5">
-                <p className="font-mono text-xs font-bold text-slate-800">
+              <div className="text-right text-[11px] text-ink-600 space-y-0.5">
+                <p className="font-mono text-xs font-bold text-ink-900">
                   ID: {letter.documentId}
                 </p>
                 <p>{letter.generatedAt}</p>
@@ -186,36 +186,36 @@ ${letter.doctorNoteClosing}
           </div>
 
           {/* TABEL DATA ANAMNESIS AWAL */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 rounded-control bg-canvas border border-border/80 text-xs">
             <div>
-              <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">
+              <span className="text-[10px] uppercase font-bold text-ink-400 block mb-0.5">
                 Keluhan Utama:
               </span>
-              <span className="font-bold text-slate-900 text-sm">
+              <span className="font-bold text-ink-900 text-sm">
                 {letter.patientOverview.mainSymptom}
               </span>
             </div>
             <div>
-              <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">
+              <span className="text-[10px] uppercase font-bold text-ink-400 block mb-0.5">
                 Durasi Gejala:
               </span>
-              <span className="font-semibold text-slate-800">
+              <span className="font-semibold text-ink-900">
                 {letter.patientOverview.duration}
               </span>
             </div>
             <div>
-              <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">
+              <span className="text-[10px] uppercase font-bold text-ink-400 block mb-0.5">
                 Derajat Gangguan:
               </span>
-              <span className="font-semibold text-slate-800 capitalize">
+              <span className="font-semibold text-ink-900 capitalize">
                 {letter.patientOverview.severity}
               </span>
             </div>
             <div>
-              <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">
+              <span className="text-[10px] uppercase font-bold text-ink-400 block mb-0.5">
                 Gejala Tambahan:
               </span>
-              <span className="font-semibold text-slate-800">
+              <span className="font-semibold text-ink-900">
                 {letter.patientOverview.accompanyingSymptoms.join(', ') || 'Tidak ada'}
               </span>
             </div>
@@ -223,25 +223,25 @@ ${letter.doctorNoteClosing}
 
           {/* BAGIAN I: IKHTISAR KLINIS NARATIF */}
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 uppercase tracking-wider border-b border-emerald-100 pb-1">
-              <Stethoscope className="h-4 w-4 text-emerald-600" />
+            <div className="flex items-center gap-2 text-xs font-bold text-brand-600 uppercase tracking-wider border-b border-border pb-1">
+              <Stethoscope className="h-4 w-4 text-brand-600" />
               <span>I. Ikhtisar Klinis Pasien (Clinical Summary)</span>
             </div>
-            <p className="text-xs sm:text-sm leading-relaxed text-slate-700 bg-emerald-50/30 p-3.5 rounded-xl border border-emerald-100/60 text-justify">
+            <p className="text-xs sm:text-sm leading-relaxed text-ink-600 bg-brand-50/30 p-3.5 rounded-control border border-border/60 text-justify">
               {letter.clinicalSummary}
             </p>
           </div>
 
           {/* BAGIAN II: POIN KUNCI PERCAKAPAN PASIEN */}
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-slate-100 pb-1">
-              <MessageSquare className="h-4 w-4 text-slate-500" />
+            <div className="flex items-center gap-2 text-xs font-bold text-ink-600 uppercase tracking-wider border-b border-border pb-1">
+              <MessageSquare className="h-4 w-4 text-ink-400" />
               <span>II. Poin Catatan dari Diskusi Pasien & Keluhan Spesifik</span>
             </div>
-            <ul className="space-y-1.5 pl-2 text-xs sm:text-sm text-slate-700">
+            <ul className="space-y-1.5 pl-2 text-xs sm:text-sm text-ink-600">
               {letter.chatInsights.map((insight, idx) => (
                 <li key={idx} className="flex items-start gap-2">
-                  <span className="font-bold text-emerald-600 shrink-0">•</span>
+                  <span className="font-bold text-brand-600 shrink-0">•</span>
                   <span>{insight}</span>
                 </li>
               ))}
@@ -251,15 +251,15 @@ ${letter.doctorNoteClosing}
           {/* DUA KOLOM: TINDAKAN MANDIRI & TANDA BAHAYA */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Tindakan Mandiri */}
-            <div className="rounded-xl border border-blue-200 bg-blue-50/40 p-3.5 space-y-2">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-blue-900 uppercase">
-                <CheckCircle2 className="h-4 w-4 text-blue-600" />
+            <div className="rounded-control border border-urgency-scheduled/25 bg-urgency-scheduled-bg p-3.5 space-y-2">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-urgency-scheduled-fg uppercase">
+                <CheckCircle2 className="h-4 w-4 text-urgency-scheduled" />
                 <span>Upaya Mandiri di Rumah</span>
               </div>
-              <ul className="text-xs text-blue-950 space-y-1">
+              <ul className="text-xs text-urgency-scheduled-fg space-y-1">
                 {letter.homeCareTried.map((care, idx) => (
                   <li key={idx} className="flex items-start gap-1.5">
-                    <span className="text-blue-500">✓</span>
+                    <span className="text-urgency-scheduled">✓</span>
                     <span>{care}</span>
                   </li>
                 ))}
@@ -267,15 +267,15 @@ ${letter.doctorNoteClosing}
             </div>
 
             {/* Tanda Bahaya Yang Diamati */}
-            <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-3.5 space-y-2">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900 uppercase">
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <div className="rounded-control border border-urgency-urgent/25 bg-urgency-urgent-bg/40 p-3.5 space-y-2">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-urgency-urgent-fg uppercase">
+                <AlertTriangle className="h-4 w-4 text-urgency-urgent" />
                 <span>Tanda Bahaya yang Diobservasi</span>
               </div>
-              <ul className="text-xs text-amber-950 space-y-1">
+              <ul className="text-xs text-urgency-urgent-fg space-y-1">
                 {letter.dangerSignsToWatch.map((danger, idx) => (
                   <li key={idx} className="flex items-start gap-1.5">
-                    <span className="text-amber-600 font-bold">!</span>
+                    <span className="text-urgency-urgent font-bold">!</span>
                     <span>{danger}</span>
                   </li>
                 ))}
@@ -289,10 +289,10 @@ ${letter.doctorNoteClosing}
               <HelpCircle className="h-4 w-4 text-purple-600" />
               <span>III. Pertanyaan Terarah Pasien untuk Konsultasi Tatap Muka</span>
             </div>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-ink-400">
               Pertanyaan ini disiapkan sistem agar komunikasi pasien dan dokter di ruang periksa menjadi lebih efisien dan terfokus:
             </p>
-            <ol className="list-decimal pl-5 space-y-1.5 text-xs sm:text-sm text-slate-800 font-medium">
+            <ol className="list-decimal pl-5 space-y-1.5 text-xs sm:text-sm text-ink-900 font-medium">
               {letter.suggestedQuestionsForDoctor.map((q, idx) => (
                 <li key={idx} className="leading-snug">{q}</li>
               ))}
@@ -300,25 +300,25 @@ ${letter.doctorNoteClosing}
           </div>
 
           {/* FOOTER KOP & CATATAN PENUTUP */}
-          <div className="border-t border-slate-200 pt-4 flex flex-wrap items-center justify-between gap-3 text-[11px] text-slate-400">
+          <div className="border-t border-border pt-4 flex flex-wrap items-center justify-between gap-3 text-[11px] text-ink-400">
             <p className="max-w-md italic leading-tight">
               {letter.doctorNoteClosing}
             </p>
             <div className="text-right">
-              <span className="font-semibold text-slate-600 block">Sistem TenangCek Triase Medis</span>
+              <span className="font-semibold text-ink-600 block">Sistem TenangCek Triase Medis</span>
               <span>Verifikasi Otomatis AI Triage</span>
             </div>
           </div>
         </div>
 
         {/* Modal Bottom Controls (Hidden saat di-print) */}
-        <div className="border-t border-slate-100 bg-slate-50 px-6 py-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
+        <div className="border-t border-border bg-canvas px-6 py-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
           <button
             type="button"
             onClick={onClose}
-            className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition shadow-2xs"
+            className="flex items-center gap-1.5 rounded-control border border-border bg-surface px-4 py-2 text-xs font-semibold text-ink-600 hover:bg-canvas transition shadow-2xs"
           >
-            <MessageSquare className="h-3.5 w-3.5 text-slate-500" />
+            <MessageSquare className="h-3.5 w-3.5 text-ink-400" />
             <span>Lanjut Obrolan Chat</span>
           </button>
 
@@ -326,7 +326,7 @@ ${letter.doctorNoteClosing}
             <button
               type="button"
               onClick={handleCopy}
-              className="flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition"
+              className="flex items-center gap-1.5 rounded-control border border-brand-500/50 bg-brand-50 px-4 py-2 text-xs font-bold text-brand-600 hover:bg-brand-100 transition"
             >
               {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
               <span>{copied ? 'Tersalin ke Clipboard!' : 'Salin Seluruh Surat'}</span>
@@ -335,7 +335,7 @@ ${letter.doctorNoteClosing}
             <button
               type="button"
               onClick={handleSaveAndDashboard}
-              className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 transition"
+              className="flex items-center gap-1.5 rounded-control bg-brand-500 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-brand-500 transition"
             >
               <LayoutDashboard className="h-4 w-4" />
               <span>Simpan & Selesai</span>

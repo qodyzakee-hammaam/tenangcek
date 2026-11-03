@@ -1,11 +1,26 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Wind, Play, Pause, RefreshCw } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Pause, Play, RefreshCw, Wind } from 'lucide-react';
 
+type Phase = 'tarik' | 'tahan' | 'hembuskan';
+
+const PHASE_LABEL: Record<Phase, string> = {
+  tarik: 'Tarik napas perlahan',
+  tahan: 'Tahan sebentar',
+  hembuskan: 'Hembuskan napas dengan rileks',
+};
+
+const PHASE_CLASS: Record<Phase, string> = {
+  tarik: 'bg-brand-500 scale-110',
+  tahan: 'bg-brand-600 scale-110',
+  hembuskan: 'bg-brand-100 scale-100',
+};
+
+/** Latihan napas singkat (docs/design-system.md §3.5, §2.6). */
 export default function BreathingExercise() {
   const [isActive, setIsActive] = useState(false);
-  const [phase, setPhase] = useState<'tarik' | 'tahan' | 'hembuskan'>('tarik');
+  const [phase, setPhase] = useState<Phase>('tarik');
   const [secondsLeft, setSecondsLeft] = useState(4);
 
   useEffect(() => {
@@ -17,13 +32,13 @@ export default function BreathingExercise() {
           if (phase === 'tarik') {
             setPhase('tahan');
             return 4;
-          } else if (phase === 'tahan') {
+          }
+          if (phase === 'tahan') {
             setPhase('hembuskan');
             return 6;
-          } else {
-            setPhase('tarik');
-            return 4;
           }
+          setPhase('tarik');
+          return 4;
         }
         return prev - 1;
       });
@@ -32,70 +47,44 @@ export default function BreathingExercise() {
     return () => clearInterval(interval);
   }, [isActive, phase]);
 
-  const getPhaseText = () => {
-    switch (phase) {
-      case 'tarik':
-        return 'Tarik Napas Perlahan...';
-      case 'tahan':
-        return 'Tahan Sebentar...';
-      case 'hembuskan':
-        return 'Hembuskan Napas Rileks...';
-    }
-  };
-
-  const getPhaseColor = () => {
-    switch (phase) {
-      case 'tarik':
-        return 'bg-emerald-500 scale-125';
-      case 'tahan':
-        return 'bg-teal-500 scale-125';
-      case 'hembuskan':
-        return 'bg-sky-400 scale-100';
-    }
-  };
-
   return (
-    <div className="rounded-2xl border border-emerald-100 bg-gradient-to-b from-emerald-50/70 to-teal-50/40 p-6 text-center shadow-sm">
-      <div className="flex items-center justify-center gap-2 text-emerald-800 font-semibold text-sm mb-2">
-        <Wind className="h-4 w-4" />
-        <span>Calm Support: Latihan Napas Sejenak</span>
+    <div className="rounded-card border border-brand-100 bg-brand-50 p-5 text-center sm:p-6">
+      <div className="flex items-center justify-center gap-2 text-sm font-semibold text-brand-600">
+        <Wind className="h-4 w-4" aria-hidden="true" />
+        <span>Latihan napas sejenak</span>
       </div>
-      <p className="text-xs text-slate-600 max-w-md mx-auto mb-6">
-        Jika Anda merasa tegang atau cemas, luangkan 1 menit untuk mengatur ritme napas agar detak jantung dan pikiran lebih tenang.
+      <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-ink-600">
+        Luangkan sekitar satu menit untuk mengatur ritme napas. Tidak ada paksaan — berhenti kapan saja kalau tidak nyaman.
       </p>
 
-      {/* Visual Circle */}
-      <div className="relative flex h-44 w-44 mx-auto items-center justify-center">
+      <div className="relative mx-auto mt-6 flex h-40 w-40 items-center justify-center" aria-hidden="true">
         <div
-          className={`absolute h-36 w-36 rounded-full transition-all duration-1000 ease-in-out opacity-20 ${
-            isActive ? getPhaseColor() : 'bg-emerald-300 scale-100'
+          className={`absolute h-32 w-32 rounded-full opacity-20 transition-all duration-1000 ease-in-out motion-reduce:transition-none ${
+            isActive ? PHASE_CLASS[phase] : 'bg-brand-500 scale-100'
           }`}
         />
         <div
-          className={`flex h-28 w-28 flex-col items-center justify-center rounded-full text-white shadow-md transition-all duration-1000 ease-in-out ${
-            isActive ? getPhaseColor() : 'bg-emerald-600 scale-100'
+          className={`flex h-24 w-24 flex-col items-center justify-center rounded-full text-white shadow-md transition-all duration-1000 ease-in-out motion-reduce:transition-none ${
+            isActive ? PHASE_CLASS[phase] : 'bg-brand-600 scale-100'
           }`}
         >
-          <span className="text-xs font-medium uppercase tracking-wider">
-            {isActive ? phase : 'Mulai'}
-          </span>
+          <span className="text-[10px] font-medium uppercase tracking-wider">{isActive ? phase : 'Mulai'}</span>
           <span className="text-2xl font-bold">{isActive ? secondsLeft : '4s'}</span>
         </div>
       </div>
 
-      <div className="mt-4 font-medium text-slate-700 text-sm h-6">
-        {isActive ? getPhaseText() : 'Tekan tombol untuk memulai latihan napas'}
-      </div>
+      <p aria-live="polite" className="mt-4 h-6 text-sm font-medium text-ink-900">
+        {isActive ? `${PHASE_LABEL[phase]} · ${secondsLeft} detik` : 'Tekan mulai saat kamu siap'}
+      </p>
 
-      {/* Controls */}
-      <div className="mt-4 flex items-center justify-center gap-3">
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
         <button
           type="button"
           onClick={() => setIsActive(!isActive)}
-          className="flex items-center gap-1.5 rounded-full bg-emerald-600 px-5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 transition"
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-control bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
         >
-          {isActive ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-          {isActive ? 'Jeda' : 'Mulai Latihan'}
+          {isActive ? <Pause className="h-4 w-4" aria-hidden="true" /> : <Play className="h-4 w-4" aria-hidden="true" />}
+          {isActive ? 'Jeda' : 'Mulai latihan'}
         </button>
 
         {isActive && (
@@ -105,10 +94,10 @@ export default function BreathingExercise() {
               setPhase('tarik');
               setSecondsLeft(4);
             }}
-            className="flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 transition"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-control border border-border bg-surface px-3 py-2 text-sm text-ink-600 transition hover:bg-canvas"
           >
-            <RefreshCw className="h-3.5 w-3.5" />
-            Reset
+            <RefreshCw className="h-4 w-4" aria-hidden="true" />
+            Ulangi
           </button>
         )}
       </div>

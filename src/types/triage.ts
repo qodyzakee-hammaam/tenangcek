@@ -5,6 +5,14 @@
 
 export type UrgencyLevel = 'darurat' | 'segera' | 'terjadwal' | 'pantau_di_rumah';
 
+/**
+ * Asal penjelasan triage.
+ * - `gemini`: model AI berhasil menjawab.
+ * - `rule_based`: panduan standar TenangCek (mis. AI sedang sibuk atau tidak dikonfigurasi).
+ * Keduanya melewati safety layer yang sama, jadi tingkat urgensi tidak berbeda.
+ */
+export type TriageSource = 'gemini' | 'rule_based';
+
 export interface UrgencyMeta {
   level: UrgencyLevel;
   label: string;

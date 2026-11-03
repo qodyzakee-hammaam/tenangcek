@@ -104,22 +104,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) return { error: new Error(error.message), session: null, user: null };
 
-      // Optional: Initialize profile in table if user created & session exists
-      if (data.user && data.session) {
-        try {
-          await supabase.from('profiles').insert([
-            {
-              id: data.user.id,
-              age_range: 'dewasa_muda',
-              tone_pref: 'santai',
-              detail_pref: 'ringkas',
-            },
-          ]);
-        } catch (e) {
-          console.warn('Profile creation hook skipped:', e);
-        }
-      }
-
+      // Profil dibuat otomatis oleh trigger `handle_new_user` di database
+      // (consent_health_data tetap false sampai pengguna memberi izin).
       return { error: null, session: data.session, user: data.user };
     } catch (err) {
       return { 

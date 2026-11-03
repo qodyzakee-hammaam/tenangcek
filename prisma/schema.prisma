@@ -1,0 +1,93 @@
+// Skema Prisma TenangCek.
+//
+// Sumber kebenaran skema: file ini + `prisma/migrations/` (yang juga memuat
+// RLS, trigger, dan CHECK constraint yang ditulis tangan). Jalankan
+// `npm run db:migrate` untuk perubahan, `npm run db:deploy` untuk menerapkan.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UrgencyLevel {
+  monitor
+  scheduled
+  urgent
+  emergency
+
+  @@map("urgency_level")
+}
+
+model Profile {
+  id                 String    @id @db.Uuid
+  ageRange           String?   @map("age_range")
+  sex                String?
+  conditions         String[]  @default([])
+  allergies          String[]  @default([])
+  tonePref           String    @default("casual") @map("tone_pref")
+  detailPref         String    @default("brief") @map("detail_pref")
+  region             String?
+  usesBpjs           Boolean   @default(false) @map("uses_bpjs")
+  budgetPref         String?   @map("budget_pref")
+  consentHealthData  Boolean   @default(false) @map("consent_health_data")
+  consentAt          DateTime? @map("consent_at") @db.Timestamptz(6)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("profiles")
+}
+
+model SymptomSession {
+  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String       @map("user_id") @db.Uuid
+  symptoms          Json
+  answers           Json         @default("{}")
+  urgencyLevel      UrgencyLevel @map("urgency_level")
+  reasoning         String
+  nextSteps         Json         @default("[]") @map("next_steps")
+  ruleFloor         UrgencyLevel? @map("rule_floor")
+  redFlagTriggered  Boolean      @default(false) @map("red_flag_triggered")
+  result            Json?
+  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  checkins          Checkin[]
+  diaryEntries      DiaryEntry[]
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("symptom_sessions")
+}
+
+model Checkin {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  sessionId      String?   @map("session_id") @db.Uuid
+  anxietyBefore  Int       @map("anxiety_before") @db.SmallInt
+  anxietyAfter   Int?      @map("anxiety_after") @db.SmallInt
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  session        SymptomSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([sessionId])
+  @@map("checkins")
+}
+
+model DiaryEntry {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  sessionId  String?   @map("session_id") @db.Uuid
+  note       String
+  severity   Int?      @db.SmallInt
+  mood       Int?      @db.SmallInt
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  session    SymptomSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([sessionId])
+  @@map("diary_entries")
+}

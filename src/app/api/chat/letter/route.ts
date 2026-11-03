@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     });
 
     const apiKey = process.env.GEMINI_API_KEY;
-    const isApiKeyConfigured = apiKey && apiKey !== 'your_gemini_api_key_here' && apiKey.length > 10;
+    const isApiKeyConfigured = apiKey && apiKey.length > 10;
 
     let parsedResult: Partial<DoctorLetterData> | null = null;
 
@@ -107,7 +107,7 @@ Output HARUS JSON murni tanpa markdown pembungkus.
 `;
 
         const response = await client.models.generateContent({
-          model: 'gemini-2.5-flash',
+          model: 'gemini-flash-latest',
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
           config: {
             responseMimeType: 'application/json',

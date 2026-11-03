@@ -76,27 +76,27 @@ function AuthContent() {
 
   return (
     <div className="mx-auto my-12 max-w-md px-4 sm:px-6">
-      <div className="overflow-hidden rounded-3xl border border-emerald-950/10 bg-white shadow-[0_24px_80px_-44px_rgba(6,78,59,.35)]">
+      <div className="overflow-hidden rounded-3xl border border-border bg-surface shadow-[0_24px_80px_-44px_rgba(6,78,59,.35)]">
         {/* Header Tab */}
-        <div className="bg-[#f3f6ee] p-6 pb-4 text-center">
+        <div className="bg-brand-50 p-6 pb-4 text-center">
           <Link href="/" className="inline-flex items-center gap-2 mb-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-900 text-lime-200 shadow-xs">
+            <div className="flex h-10 w-10 items-center justify-center rounded-control bg-brand-600 text-white shadow-xs">
               <HeartPulse className="h-5 w-5" />
             </div>
-            <span className="text-xl font-bold text-emerald-950">
+            <span className="text-xl font-bold text-ink-900">
               TenangCek
             </span>
           </Link>
-          <h1 className="text-base font-bold text-slate-800">
+          <h1 className="text-base font-bold text-ink-900">
             {isLogin ? 'Selamat Datang Kembali' : 'Buat Akun Pribadi'}
           </h1>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-ink-400">
             {isLogin
               ? 'Masuk untuk mengakses riwayat triage & diary gejala'
               : 'Daftar untuk mulai cek keluhan kesehatan dengan aman'}
           </p>
 
-          <div className="mt-5 grid grid-cols-2 rounded-xl bg-slate-100/80 p-1 text-xs font-semibold">
+          <div className="mt-5 grid grid-cols-2 rounded-control bg-canvas/80 p-1 text-xs font-semibold">
             <button
               type="button"
               onClick={() => {
@@ -104,7 +104,7 @@ function AuthContent() {
                 setErrorMsg(null);
               }}
               className={`rounded-lg py-2 transition ${
-                isLogin ? 'bg-white text-emerald-800 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800'
+                isLogin ? 'bg-surface text-brand-600 shadow-2xs font-bold' : 'text-ink-400 hover:text-ink-900'
               }`}
             >
               Masuk (Login)
@@ -116,7 +116,7 @@ function AuthContent() {
                 setErrorMsg(null);
               }}
               className={`rounded-lg py-2 transition ${
-                !isLogin ? 'bg-white text-emerald-800 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800'
+                !isLogin ? 'bg-surface text-brand-600 shadow-2xs font-bold' : 'text-ink-400 hover:text-ink-900'
               }`}
             >
               Daftar Akun Baru
@@ -127,49 +127,49 @@ function AuthContent() {
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 pt-2 space-y-4">
           {errorMsg && (
-            <div className="flex items-start gap-2 rounded-xl bg-rose-50 p-3 text-xs text-rose-700 border border-rose-200">
-              <AlertCircle className="h-4 w-4 shrink-0 text-rose-600 mt-0.5" />
+            <div className="flex items-start gap-2 rounded-control bg-urgency-emergency-bg p-3 text-xs text-urgency-emergency-fg border border-urgency-emergency/25">
+              <AlertCircle className="h-4 w-4 shrink-0 text-urgency-emergency mt-0.5" />
               <span>{errorMsg}</span>
             </div>
           )}
 
           {successMsg && (
-            <div className="flex items-center gap-2 rounded-xl bg-emerald-50 p-3 text-xs text-emerald-700 border border-emerald-200">
-              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+            <div className="flex items-center gap-2 rounded-control bg-brand-50 p-3 text-xs text-brand-600 border border-border">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-brand-600" />
               <span>{successMsg}</span>
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-xs font-semibold text-ink-600 mb-1">
               Alamat Email
             </label>
             <div className="relative">
-              <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+              <Mail className="absolute left-3.5 top-3 h-4 w-4 text-ink-400" />
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="nama@email.com"
-                className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-4 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100 transition"
+                className="w-full rounded-control border border-border py-2.5 pl-10 pr-4 text-xs sm:text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-50 transition"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-xs font-semibold text-ink-600 mb-1">
               Kata Sandi (Password)
             </label>
             <div className="relative">
-              <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+              <Lock className="absolute left-3.5 top-3 h-4 w-4 text-ink-400" />
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Minimal 6 karakter"
-                className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-4 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100 transition"
+                className="w-full rounded-control border border-border py-2.5 pl-10 pr-4 text-xs sm:text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-50 transition"
               />
             </div>
           </div>
@@ -177,7 +177,7 @@ function AuthContent() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-xs sm:text-sm font-bold text-white shadow-xs hover:bg-emerald-700 disabled:opacity-50 transition"
+            className="w-full flex items-center justify-center gap-2 rounded-control bg-brand-500 py-3 text-xs sm:text-sm font-bold text-white shadow-xs hover:bg-brand-500 disabled:opacity-50 transition"
           >
             {isSubmitting ? (
               'Memproses...'
@@ -197,7 +197,7 @@ function AuthContent() {
           <div className="pt-2 text-center">
             <Link
               href="/"
-              className="text-xs text-slate-400 hover:text-slate-600 transition"
+              className="text-xs text-ink-400 hover:text-ink-600 transition"
             >
               ← Kembali ke Beranda Informasi
             </Link>
@@ -205,9 +205,9 @@ function AuthContent() {
         </form>
 
         {/* Privacy Note */}
-        <div className="border-t border-slate-100 bg-slate-50/70 p-4 text-center">
-          <p className="text-[11px] text-slate-500 flex items-center justify-center gap-1.5">
-            <ShieldCheck className="h-4 w-4 text-emerald-600" />
+        <div className="border-t border-border bg-canvas/70 p-4 text-center">
+          <p className="text-[11px] text-ink-400 flex items-center justify-center gap-1.5">
+            <ShieldCheck className="h-4 w-4 text-brand-600" />
             Privasi data kesehatan dilindungi Row Level Security (RLS).
           </p>
         </div>
@@ -218,7 +218,7 @@ function AuthContent() {
 
 export default function AuthPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-xs text-slate-400">Memuat halaman login...</div>}>
+    <Suspense fallback={<div className="p-8 text-center text-xs text-ink-400">Memuat halaman login...</div>}>
       <AuthContent />
     </Suspense>
   );

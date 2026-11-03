@@ -27,6 +27,7 @@ import {
 import DoctorLetterModal from './DoctorLetterModal';
 import BreathingExercise from '../calm/BreathingExercise';
 import RedFlagAlert from './RedFlagAlert';
+import { PRIMARY_EMERGENCY_CONTACT } from '@/content/emergency';
 import { DoctorLetterData } from '@/app/api/chat/letter/route';
 
 interface Message {
@@ -45,39 +46,39 @@ interface Props {
 const URGENCY_CONFIG: Record<UrgencyLevel, UrgencyMeta> = {
   darurat: {
     level: 'darurat',
-    label: 'Darurat Medis',
-    badgeColor: 'bg-rose-600 text-white shadow-rose-200',
-    borderColor: 'border-rose-400',
-    bgColor: 'bg-rose-50',
-    actionText: 'Segera ke IGD terdekat',
-    timeframe: 'SEKARANG',
+    label: 'Darurat',
+    badgeColor: 'bg-urgency-emergency-bg text-urgency-emergency-fg ring-1 ring-urgency-emergency/30',
+    borderColor: 'border-urgency-emergency/40',
+    bgColor: 'bg-urgency-emergency-bg',
+    actionText: 'Ke IGD sekarang',
+    timeframe: 'Sekarang',
   },
   segera: {
     level: 'segera',
-    label: 'Periksa Segera',
-    badgeColor: 'bg-amber-500 text-white shadow-amber-200',
-    borderColor: 'border-amber-400',
-    bgColor: 'bg-amber-50',
-    actionText: 'Kunjungi klinik/dokter dalam 24 jam',
-    timeframe: 'Dalam 24 Jam',
+    label: 'Segera',
+    badgeColor: 'bg-urgency-urgent-bg text-urgency-urgent-fg ring-1 ring-urgency-urgent/30',
+    borderColor: 'border-urgency-urgent/40',
+    bgColor: 'bg-urgency-urgent-bg',
+    actionText: 'Periksa ke dokter dalam 24 jam',
+    timeframe: 'Dalam 24 jam',
   },
   terjadwal: {
     level: 'terjadwal',
-    label: 'Periksa Terjadwal',
-    badgeColor: 'bg-blue-600 text-white shadow-blue-200',
-    borderColor: 'border-blue-300',
-    bgColor: 'bg-blue-50',
-    actionText: 'Buat janji dokter dalam beberapa hari',
-    timeframe: '2 – 3 Hari',
+    label: 'Terjadwal',
+    badgeColor: 'bg-urgency-scheduled-bg text-urgency-scheduled-fg ring-1 ring-urgency-scheduled/30',
+    borderColor: 'border-urgency-scheduled/40',
+    bgColor: 'bg-urgency-scheduled-bg',
+    actionText: 'Buat janji pemeriksaan dalam beberapa hari',
+    timeframe: 'Beberapa hari',
   },
   pantau_di_rumah: {
     level: 'pantau_di_rumah',
-    label: 'Pantau Mandiri',
-    badgeColor: 'bg-emerald-600 text-white shadow-emerald-200',
-    borderColor: 'border-emerald-300',
-    bgColor: 'bg-emerald-50',
-    actionText: 'Perawatan mandiri di rumah',
-    timeframe: 'Mandiri',
+    label: 'Pantau di rumah',
+    badgeColor: 'bg-urgency-monitor-bg text-urgency-monitor-fg ring-1 ring-urgency-monitor/30',
+    borderColor: 'border-urgency-monitor/40',
+    bgColor: 'bg-urgency-monitor-bg',
+    actionText: 'Pantau gejala dan waspadai tanda eskalasi',
+    timeframe: 'Rawat mandiri',
   },
 };
 
@@ -85,16 +86,16 @@ const SUGGESTED_QUESTIONS = [
   'Apa pertolongan pertama yang bisa saya lakukan?',
   'Makanan & minuman apa yang dianjurkan?',
   'Kapan tanda bahaya yang harus segera ke dokter?',
-  'Bolehkah minum obat pereda nyeri/demam bebas?',
+  'Bagaimana menyiapkan diri sebelum ke dokter?',
   'Bagaimana agar tidak cemas dan overthinking?',
 ];
 
 function UrgencyIcon({ level }: { level: UrgencyLevel }) {
   switch (level) {
-    case 'darurat': return <ShieldAlert className="h-5 w-5 text-rose-600" />;
-    case 'segera': return <AlertTriangle className="h-5 w-5 text-amber-500" />;
-    case 'terjadwal': return <CalendarCheck className="h-5 w-5 text-blue-600" />;
-    default: return <Home className="h-5 w-5 text-emerald-600" />;
+    case 'darurat': return <ShieldAlert className="h-5 w-5 text-urgency-emergency" />;
+    case 'segera': return <AlertTriangle className="h-5 w-5 text-urgency-urgent" />;
+    case 'terjadwal': return <CalendarCheck className="h-5 w-5 text-urgency-scheduled" />;
+    default: return <Home className="h-5 w-5 text-urgency-monitor" />;
   }
 }
 
@@ -300,16 +301,16 @@ Silakan tanyakan apa saja yang masih membuat Anda khawatir. Setelah selesai, kli
 
           const parts = line.split(/(\*\*.*?\*\*|\*.*?\*)/g).map((part, pIdx) => {
             if (part.startsWith('**') && part.endsWith('**'))
-              return <strong key={pIdx} className="font-bold text-slate-900">{part.slice(2, -2)}</strong>;
+              return <strong key={pIdx} className="font-bold text-ink-900">{part.slice(2, -2)}</strong>;
             if (part.startsWith('*') && part.endsWith('*'))
-              return <em key={pIdx} className="italic text-slate-600">{part.slice(1, -1)}</em>;
+              return <em key={pIdx} className="italic text-ink-600">{part.slice(1, -1)}</em>;
             return part;
           });
 
           if (line.trim().startsWith('- ') || line.trim().startsWith('* '))
             return (
               <div key={idx} className="flex items-start gap-2 pl-2">
-                <span className="text-emerald-500 font-bold mt-0.5">•</span>
+                <span className="text-brand-500 font-bold mt-0.5">•</span>
                 <span>{parts}</span>
               </div>
             );
@@ -328,39 +329,39 @@ Silakan tanyakan apa saja yang masih membuat Anda khawatir. Setelah selesai, kli
   };
 
   return (
-    <div className="flex h-full w-full overflow-hidden bg-slate-100">
+    <div className="flex h-full w-full overflow-hidden bg-canvas">
 
       {/* ══════════════════════════════════════════
           SIDEBAR KIRI — Info Triase
       ══════════════════════════════════════════ */}
-      <aside className="hidden lg:flex flex-col w-80 xl:w-96 shrink-0 border-r border-slate-200 bg-white overflow-y-auto">
+      <aside className="hidden lg:flex flex-col w-80 xl:w-96 shrink-0 border-r border-border bg-surface overflow-y-auto">
 
         {/* Sidebar Header */}
-        <div className="px-5 pt-5 pb-4 border-b border-slate-100">
-          <Link href="/dashboard" className="flex items-center gap-2 text-slate-500 hover:text-emerald-700 transition text-xs mb-4">
+        <div className="px-5 pt-5 pb-4 border-b border-border">
+          <Link href="/dashboard" className="flex items-center gap-2 text-ink-400 hover:text-brand-600 transition text-xs mb-4">
             <ArrowLeft className="h-3.5 w-3.5" />
             Kembali ke Dashboard
           </Link>
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm">
+            <div className="flex h-9 w-9 items-center justify-center rounded-control bg-brand-500 text-white shadow-sm">
               <HeartPulse className="h-5 w-5" />
             </div>
             <div>
-              <p className="font-bold text-slate-900 text-sm leading-tight">TenangCek</p>
-              <p className="text-[11px] text-slate-500">AI Health Triage</p>
+              <p className="font-bold text-ink-900 text-sm leading-tight">TenangCek</p>
+              <p className="text-[11px] text-ink-400">AI Health Triage</p>
             </div>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-slate-100 shrink-0">
+        <div className="flex border-b border-border shrink-0">
           <button
             type="button"
             onClick={() => setSidebarTab('triase')}
             className={`flex-1 py-2.5 text-xs font-semibold transition ${
               sidebarTab === 'triase'
-                ? 'text-emerald-700 border-b-2 border-emerald-600'
-                : 'text-slate-500 hover:text-slate-700'
+                ? 'text-brand-600 border-b-2 border-brand-500'
+                : 'text-ink-400 hover:text-ink-600'
             }`}
           >
             Rincian Triase
@@ -370,8 +371,8 @@ Silakan tanyakan apa saja yang masih membuat Anda khawatir. Setelah selesai, kli
             onClick={() => setSidebarTab('napas')}
             className={`flex-1 py-2.5 text-xs font-semibold transition ${
               sidebarTab === 'napas'
-                ? 'text-teal-700 border-b-2 border-teal-600'
-                : 'text-slate-500 hover:text-slate-700'
+                ? 'text-brand-600 border-b-2 border-brand-500'
+                : 'text-ink-400 hover:text-ink-600'
             }`}
           >
             Relaksasi Napas
@@ -384,42 +385,42 @@ Silakan tanyakan apa saja yang masih membuat Anda khawatir. Setelah selesai, kli
             <div className="p-4 space-y-4">
 
               {/* Urgency Badge */}
-              <div className={`rounded-xl p-4 ${meta.bgColor} border ${meta.borderColor}`}>
+              <div className={`rounded-control p-4 ${meta.bgColor} border ${meta.borderColor}`}>
                 <div className="flex items-center gap-2.5 mb-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white shadow-xs">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface shadow-xs">
                     <UrgencyIcon level={result.urgencyLevel} />
                   </div>
                   <div>
                     <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase ${meta.badgeColor}`}>
                       {meta.label}
                     </span>
-                    <p className="text-[11px] text-slate-600 mt-0.5 flex items-center gap-1">
+                    <p className="text-[11px] text-ink-600 mt-0.5 flex items-center gap-1">
                       <Clock className="h-3 w-3" /> {meta.timeframe}
                     </p>
                   </div>
                 </div>
-                <p className="text-xs text-slate-700 font-medium bg-white/80 rounded-lg px-3 py-2">
+                <p className="text-xs text-ink-600 font-medium bg-surface/80 rounded-lg px-3 py-2">
                   {meta.actionText}
                 </p>
               </div>
 
               {/* Keluhan Pasien */}
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 space-y-2">
-                <p className="text-[11px] font-bold uppercase text-slate-400 tracking-wide">Keluhan Pasien</p>
-                <div className="space-y-1.5 text-xs text-slate-700">
-                  <p><span className="text-slate-400">Gejala:</span> <strong>{formData.mainSymptom}</strong></p>
-                  {formData.duration && <p><span className="text-slate-400">Durasi:</span> {formData.duration}</p>}
-                  {formData.severity && <p><span className="text-slate-400">Keparahan:</span> {formData.severity}</p>}
+              <div className="rounded-control border border-border bg-canvas p-3.5 space-y-2">
+                <p className="text-[11px] font-bold uppercase text-ink-400 tracking-wide">Keluhan Pasien</p>
+                <div className="space-y-1.5 text-xs text-ink-600">
+                  <p><span className="text-ink-400">Gejala:</span> <strong>{formData.mainSymptom}</strong></p>
+                  {formData.duration && <p><span className="text-ink-400">Durasi:</span> {formData.duration}</p>}
+                  {formData.severity && <p><span className="text-ink-400">Keparahan:</span> {formData.severity}</p>}
                   {formData.accompanyingSymptoms && formData.accompanyingSymptoms.length > 0 && (
-                    <p><span className="text-slate-400">Gejala penyerta:</span> {formData.accompanyingSymptoms.join(', ')}</p>
+                    <p><span className="text-ink-400">Gejala penyerta:</span> {formData.accompanyingSymptoms.join(', ')}</p>
                   )}
                 </div>
               </div>
 
               {/* Alasan */}
               <div>
-                <p className="text-[11px] font-bold uppercase text-slate-400 tracking-wide mb-1.5">Analisis AI</p>
-                <p className="text-xs text-slate-600 leading-relaxed bg-white border border-slate-200 rounded-xl p-3">
+                <p className="text-[11px] font-bold uppercase text-ink-400 tracking-wide mb-1.5">Analisis AI</p>
+                <p className="text-xs text-ink-600 leading-relaxed bg-surface border border-border rounded-control p-3">
                   {result.reasoning}
                 </p>
               </div>
@@ -427,11 +428,11 @@ Silakan tanyakan apa saja yang masih membuat Anda khawatir. Setelah selesai, kli
               {/* Langkah Berikutnya */}
               {result.nextSteps && result.nextSteps.length > 0 && (
                 <div>
-                  <p className="text-[11px] font-bold uppercase text-slate-400 tracking-wide mb-1.5">Langkah Berikutnya</p>
+                  <p className="text-[11px] font-bold uppercase text-ink-400 tracking-wide mb-1.5">Langkah Berikutnya</p>
                   <div className="space-y-1.5">
                     {result.nextSteps.map((step, i) => (
-                      <div key={i} className="flex items-start gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
-                        <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-bold text-emerald-700 mt-0.5">
+                      <div key={i} className="flex items-start gap-2.5 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-ink-600">
+                        <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-brand-100 text-[10px] font-bold text-brand-600 mt-0.5">
                           {i + 1}
                         </span>
                         <span>{step}</span>
@@ -444,13 +445,13 @@ Silakan tanyakan apa saja yang masih membuat Anda khawatir. Setelah selesai, kli
               {/* Tanda Bahaya */}
               {result.dangerSignsToWatch && result.dangerSignsToWatch.length > 0 && (
                 <div>
-                  <p className="text-[11px] font-bold uppercase text-rose-400 tracking-wide mb-1.5 flex items-center gap-1">
+                  <p className="text-[11px] font-bold uppercase text-urgency-emergency tracking-wide mb-1.5 flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" /> Tanda Bahaya
                   </p>
-                  <ul className="space-y-1 rounded-xl bg-rose-50 border border-rose-100 p-3 text-xs text-rose-900">
+                  <ul className="space-y-1 rounded-control bg-urgency-emergency-bg border border-urgency-emergency/20 p-3 text-xs text-urgency-emergency-fg">
                     {result.dangerSignsToWatch.map((sign, i) => (
                       <li key={i} className="flex items-start gap-2">
-                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-rose-400 shrink-0" />
+                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-urgency-emergency shrink-0" />
                         {sign}
                       </li>
                     ))}
@@ -460,15 +461,15 @@ Silakan tanyakan apa saja yang masih membuat Anda khawatir. Setelah selesai, kli
 
               {/* Calm Support */}
               {result.calmSupport?.message && (
-                <div className="rounded-xl border border-teal-100 bg-teal-50 p-3 text-xs text-teal-900 flex items-start gap-2">
+                <div className="rounded-control border border-brand-100 bg-brand-50 p-3 text-xs text-ink-600 flex items-start gap-2">
                   <span className="text-base shrink-0">🌿</span>
                   <p className="leading-relaxed">{result.calmSupport.message}</p>
                 </div>
               )}
 
               {/* Engine info */}
-              <div className="text-[11px] text-slate-400 flex items-center gap-1.5">
-                <Sparkles className="h-3 w-3 text-emerald-500" />
+              <div className="text-[11px] text-ink-400 flex items-center gap-1.5">
+                <Sparkles className="h-3 w-3 text-brand-500" />
                 {isLiveGemini === true ? 'Powered by Gemini 3.6 Flash' : isLiveGemini === false ? 'AI Health Engine (fallback)' : 'TenangCek AI'}
               </div>
             </div>
@@ -480,12 +481,12 @@ Silakan tanyakan apa saja yang masih membuat Anda khawatir. Setelah selesai, kli
         </div>
 
         {/* Sidebar Footer Buttons */}
-        <div className="shrink-0 border-t border-slate-100 p-4 space-y-2">
+        <div className="shrink-0 border-t border-border p-4 space-y-2">
           <button
             type="button"
             onClick={handleEndChat}
             disabled={isGeneratingLetter}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 transition shadow-sm"
+            className="w-full flex items-center justify-center gap-2 rounded-control bg-brand-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-500 disabled:opacity-50 transition shadow-sm"
           >
             {isGeneratingLetter ? (
               <><Loader2 className="h-4 w-4 animate-spin" />Menyusun Surat...</>
@@ -496,7 +497,7 @@ Silakan tanyakan apa saja yang masih membuat Anda khawatir. Setelah selesai, kli
           <button
             type="button"
             onClick={onReset}
-            className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 transition"
+            className="w-full flex items-center justify-center gap-2 rounded-control border border-border bg-surface px-4 py-2 text-xs font-medium text-ink-600 hover:bg-canvas transition"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             Reset Gejala Baru
@@ -510,34 +511,34 @@ Silakan tanyakan apa saja yang masih membuat Anda khawatir. Setelah selesai, kli
       <div className="flex flex-1 flex-col overflow-hidden">
 
         {/* Chat Top Bar */}
-        <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3 shrink-0">
+        <div className="flex items-center justify-between gap-3 border-b border-border bg-surface px-4 py-3 shrink-0">
           {/* Mobile: Back + brand */}
           <div className="flex items-center gap-3 min-w-0">
             <Link
               href="/dashboard"
-              className="flex lg:hidden items-center justify-center h-8 w-8 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition shrink-0"
+              className="flex lg:hidden items-center justify-center h-8 w-8 rounded-lg border border-border text-ink-400 hover:bg-canvas transition shrink-0"
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
 
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-sm">
+              <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-brand-600 text-white shadow-sm">
                 <Bot className="h-5 w-5" />
                 <span className="absolute -bottom-0.5 -right-0.5 flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 border-2 border-white" />
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-500 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand-500 border-2 border-white" />
                 </span>
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="font-bold text-slate-900 text-sm truncate">TenangCek AI Companion</p>
+                  <p className="font-bold text-ink-900 text-sm truncate">TenangCek AI Companion</p>
                   <span className={`hidden sm:inline-block shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${meta.badgeColor}`}>
                     {meta.label}
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-500 truncate">
+                <p className="text-[11px] text-ink-400 truncate">
                   {formData.mainSymptom} • {formData.severity ?? 'sedang'} •{' '}
-                  <span className="text-emerald-700 font-semibold">
+                  <span className="text-brand-600 font-semibold">
                     {isLiveGemini ? 'Gemini 3.6 Flash' : 'AI Engine'}
                   </span>
                 </p>
@@ -552,7 +553,7 @@ Silakan tanyakan apa saja yang masih membuat Anda khawatir. Setelah selesai, kli
               type="button"
               onClick={handleEndChat}
               disabled={isGeneratingLetter}
-              className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50 transition"
+              className="flex items-center gap-1.5 rounded-control bg-brand-500 px-3 py-2 text-xs font-bold text-white hover:bg-brand-500 disabled:opacity-50 transition"
             >
               {isGeneratingLetter
                 ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -566,21 +567,21 @@ Silakan tanyakan apa saja yang masih membuat Anda khawatir. Setelah selesai, kli
 
         {/* Red Flag Alert */}
         {result.isRedFlagTriggered && (
-          <div className="px-4 py-3 bg-rose-50 border-b border-rose-200 shrink-0">
+          <div className="px-4 py-3 bg-urgency-emergency-bg border-b border-urgency-emergency/25 shrink-0">
             <RedFlagAlert
               reason={result.reasoning}
-              actionText={result.nextSteps?.[0] ?? 'Segera ke IGD atau hubungi 119'}
+              actionText={result.nextSteps?.[0] ?? `Segera ke IGD atau hubungi ${PRIMARY_EMERGENCY_CONTACT.number}`}
             />
           </div>
         )}
 
         {/* ── Chat Messages Area ── */}
-        <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 space-y-4 bg-slate-50">
+        <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 space-y-4 bg-canvas">
 
           {/* Session start indicator */}
           <div className="text-center">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-500 shadow-xs">
-              <HeartPulse className="h-3 w-3 text-emerald-600" />
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-surface border border-border px-3 py-1 text-[11px] font-semibold text-ink-400 shadow-xs">
+              <HeartPulse className="h-3 w-3 text-brand-600" />
               Sesi Konsultasi Dimulai
             </span>
           </div>
@@ -595,7 +596,7 @@ Silakan tanyakan apa saja yang masih membuat Anda khawatir. Setelah selesai, kli
                 {/* Avatar */}
                 <div
                   className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white shadow-sm ${
-                    isUser ? 'bg-emerald-600' : 'bg-slate-800'
+                    isUser ? 'bg-brand-500' : 'bg-ink-900'
                   }`}
                 >
                   {isUser ? <UserIcon className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
@@ -603,17 +604,17 @@ Silakan tanyakan apa saja yang masih membuat Anda khawatir. Setelah selesai, kli
 
                 {/* Bubble */}
                 <div
-                  className={`max-w-[80%] sm:max-w-[72%] rounded-2xl px-4 py-3 shadow-xs ${
+                  className={`max-w-[80%] sm:max-w-[72%] rounded-card px-4 py-3 shadow-xs ${
                     isUser
-                      ? 'bg-emerald-600 text-white rounded-br-sm'
-                      : 'bg-white text-slate-800 border border-slate-200 rounded-bl-sm'
+                      ? 'bg-brand-500 text-white rounded-br-sm'
+                      : 'bg-surface text-ink-900 border border-border rounded-bl-sm'
                   }`}
                 >
                   {isUser
                     ? <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                     : renderContent(msg.content)
                   }
-                  <p className={`mt-1.5 text-[10px] text-right ${isUser ? 'text-emerald-100' : 'text-slate-400'}`}>
+                  <p className={`mt-1.5 text-[10px] text-right ${isUser ? 'text-brand-100' : 'text-ink-400'}`}>
                     {msg.timestamp}
                   </p>
                 </div>
@@ -624,11 +625,11 @@ Silakan tanyakan apa saja yang masih membuat Anda khawatir. Setelah selesai, kli
           {/* Typing indicator */}
           {isLoading && !hasResponseStarted && (
             <div className="flex items-end gap-2.5">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-800 text-white shadow-sm">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink-900 text-white shadow-sm">
                 <Bot className="h-4 w-4" />
               </div>
-              <div className="rounded-2xl rounded-bl-sm bg-white border border-slate-200 shadow-xs px-4 py-3 flex items-center gap-2 text-xs text-slate-500">
-                <Loader2 className="h-4 w-4 animate-spin text-emerald-600 shrink-0" />
+              <div className="rounded-card rounded-bl-sm bg-surface border border-border shadow-xs px-4 py-3 flex items-center gap-2 text-xs text-ink-400">
+                <Loader2 className="h-4 w-4 animate-spin text-brand-600 shrink-0" />
                 TenangCek sedang menyusun jawaban...
               </div>
             </div>
@@ -638,10 +639,10 @@ Silakan tanyakan apa saja yang masih membuat Anda khawatir. Setelah selesai, kli
         </div>
 
         {/* ── Quick Chips ── */}
-        <div className="border-t border-slate-200 bg-white px-4 py-2 overflow-x-auto shrink-0">
+        <div className="border-t border-border bg-surface px-4 py-2 overflow-x-auto shrink-0">
           <div className="flex items-center gap-2 whitespace-nowrap">
-            <span className="text-[11px] font-bold text-slate-400 shrink-0 flex items-center gap-1">
-              <Sparkles className="h-3 w-3 text-emerald-500" />
+            <span className="text-[11px] font-bold text-ink-400 shrink-0 flex items-center gap-1">
+              <Sparkles className="h-3 w-3 text-brand-500" />
               Tanya cepat:
             </span>
             {SUGGESTED_QUESTIONS.map((q, i) => (
@@ -650,7 +651,7 @@ Silakan tanyakan apa saja yang masih membuat Anda khawatir. Setelah selesai, kli
                 type="button"
                 disabled={isLoading}
                 onClick={() => handleSendMessage(q)}
-                className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-medium text-slate-600 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800 disabled:opacity-50 transition"
+                className="shrink-0 rounded-full border border-border bg-canvas px-3 py-1 text-[11px] font-medium text-ink-600 hover:border-brand-500/50 hover:bg-brand-50 hover:text-brand-600 disabled:opacity-50 transition"
               >
                 {q}
               </button>
@@ -661,7 +662,7 @@ Silakan tanyakan apa saja yang masih membuat Anda khawatir. Setelah selesai, kli
         {/* ── Input Bar ── */}
         <form
           onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
-          className="border-t border-slate-200 bg-white px-4 py-3 shrink-0"
+          className="border-t border-border bg-surface px-4 py-3 shrink-0"
         >
           <div className="flex items-center gap-2">
             <input
@@ -671,23 +672,23 @@ Silakan tanyakan apa saja yang masih membuat Anda khawatir. Setelah selesai, kli
               onChange={(e) => setInputText(e.target.value)}
               disabled={isLoading}
               placeholder="Tanyakan keluhan Anda (misal: boleh minum es? kapan harus periksa?)..."
-              className="flex-1 rounded-2xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-100 disabled:opacity-60 transition"
+              className="flex-1 rounded-card border border-border bg-canvas px-4 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand-50 disabled:opacity-60 transition"
             />
             <button
               type="submit"
               disabled={isLoading || !inputText.trim()}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 transition shadow-sm"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card bg-brand-500 text-white hover:bg-brand-500 disabled:opacity-40 transition shadow-sm"
             >
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </button>
           </div>
 
-          <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400 px-1">
+          <div className="mt-2 flex items-center justify-between text-[11px] text-ink-400 px-1">
             <span>Tekan <strong>Enter</strong> untuk kirim</span>
             <button
               type="button"
               onClick={onReset}
-              className="hover:text-slate-600 transition flex items-center gap-1"
+              className="hover:text-ink-600 transition flex items-center gap-1"
             >
               <RotateCcw className="h-3 w-3" />
               Reset Gejala
