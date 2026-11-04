@@ -103,10 +103,10 @@ Orang dengan keluhan ringan yang dipicu atau diperparah kecemasan terjebak antar
 | 8   | Jalur Hemat            | Rekomendasi faskes per level + catatan BPJS/rujukan dari `content/costPath.ts`                                   | **Sudah** — belum dipersonalisasi per kota/BPJS pengguna |
 | 9   | Crisis Safety Net      | Halaman `/crisis` statis berisi kontak bantuan dan langkah awal                                                  | **Sebagian** — tidak ada deteksi krisis otomatis |
 | 10  | Ringkasan untuk Dokter | Ringkasan + 3 pertanyaan (modal) dan surat konsultasi yang bisa disalin/dicetak                                  | **Sudah** |
-| 11  | Symptom Diary          | Catatan gejala + keparahan harian; tamu di `sessionStorage`, akun di database                                    | **Sebagian** — mood belum di form, pengingat eskalasi belum ada |
-| 12  | Riwayat Pengecekan     | Riwayat tamu di perangkat; riwayat akun di database; impor riwayat tamu setelah login + consent                  | **Sudah** |
+| 11  | Symptom Diary          | Catatan gejala + keparahan harian; tamu di `sessionStorage`, akun di database; hapus per entri atau semua | **Sudah** — mood belum di form, pengingat eskalasi belum ada |
+| 12  | Riwayat Pengecekan     | Timeline berkelanjutan untuk akun; filter tanggal (preset/rentang), jam lokal, dan urgensi; impor titipan tamu dari Profil | **Sudah** |
 | 13  | Chat Lanjutan          | Tanya jawab kontekstual setelah hasil, streaming, fallback lokal saat Gemini sibuk                               | **Sudah** |
-| 14  | Personalisasi Profil   | Skema menyimpan rentang usia, kondisi, alergi, preferensi nada/detail                                            | **Sebagian** — belum ada halaman pengaturan profil |
+| 14  | Personalisasi Profil   | Skema menyimpan rentang usia, kondisi, alergi, preferensi nada/detail; halaman Profil untuk akun & privasi      | **Sebagian** — form personalisasi belum ada |
 
 ### Scope
 
@@ -125,14 +125,14 @@ Orang dengan keluhan ringan yang dipicu atau diperparah kecemasan terjebak antar
 5. Bila tidak ada red flag, Gemini diminta memberi triage JSON; bila Gemini gagal, fallback rule-based dipakai. Safety layer memastikan urgensi tidak turun.
 6. Hasil tampil di `ResultCard`: level urgensi → alasan → kemungkinan umum → konteks kecemasan → tanda bahaya → maks. 3 langkah → jalur hemat → ringkasan dokter → check-in sesudah → disclaimer.
 7. Dari hasil, pengguna bisa membuka **chat lanjutan** (`InteractiveAiChat`): bertanya bebas, memakai pertanyaan cepat, atau membuka latihan napas.
-8. Tombol **Akhiri & Buat Surat Dokter** memanggil `/api/chat/letter` dan menampilkan `DoctorLetterModal` (salin, cetak, simpan ke dashboard).
+8. Tombol **Akhiri & Buat Surat Dokter** memanggil `/api/chat/letter` dan menampilkan `DoctorLetterModal` (salin, cetak, simpan). Surat tersimpan ditampilkan di **Profil**.
 9. Riwayat:
-   - **Tamu** → otomatis tersimpan di `localStorage` perangkat dan tampil di `/dashboard`.
-   - **Login + consent** → tersimpan di database dan bisa dibuka dari perangkat lain.
-   - **Login tanpa consent** → hanya cache perangkat; dashboard menjelaskan bahwa penyimpanan akun belum aktif.
-10. Setelah login, riwayat tamu ditampilkan dengan label "dari perangkat ini". Pengguna dapat menekan **Simpan ke akun** (atau otomatis bila consent sudah aktif).
-11. Check-in kecemasan sesudah hasil dan catatan harian di `/diary` membantu memantau perkembangan. Diary tamu hilang saat tab ditutup; diary akun tersimpan setelah consent.
-12. Logout membersihkan jejak riwayat/surat milik akun dari perangkat; data tamu tidak ikut terhapus.
+   - **Tamu** → tidak ada timeline. Hasil cek disimpan sementara di perangkat sebagai titipan yang bisa diimpor setelah masuk.
+   - **Login + consent** → tersimpan di database dan tampil sebagai timeline berkelanjutan di `/dashboard`, lengkap dengan filter tanggal, jam, dan urgensi.
+   - **Login tanpa consent** → riwayat lama disembunyikan; dashboard mengarahkan ke Profil untuk mengaktifkan izin.
+10. Setelah login, pengguna membuka **Profil** untuk melihat titipan riwayat dari perangkat dan menekan **Simpan ke akun**. Impor dikirim bertahap (maks. 20 entri per permintaan) dan hanya berjalan bila consent aktif.
+11. Check-in kecemasan sesudah hasil dan catatan harian di `/diary` membantu memantau perkembangan. Diary tamu hilang saat tab ditutup; diary akun tersimpan setelah consent. Setiap catatan bisa dihapus, atau seluruh diary lewat "Hapus semua".
+12. Logout dan hapus akun dilakukan dari **Profil**. Logout membersihkan jejak riwayat/surat milik akun dari perangkat; data tamu tidak ikut terhapus.
 
 **Catatan keamanan:** tidak ada pemotongan alur otomatis untuk teks krisis mental. Halaman `/crisis` dapat dibuka dari Navbar, Footer, atau tautan pada peringatan red flag.
 
@@ -170,8 +170,8 @@ Bila penjelasan berasal dari fallback rule-based, kartu menampilkan catatan tena
 
 | Aspek             | Data                                           | Dampak                                                   | Status |
 | ----------------- | ---------------------------------------------- | -------------------------------------------------------- | ------ |
-| Profil dasar      | Rentang usia, jenis kelamin (opsional)         | Pertanyaan lanjutan lebih sesuai                         | Skema siap; UI pengaturan belum ada |
-| Kondisi khusus    | Penyakit kronis, alergi, kehamilan (opsional)  | Ambang urgensi lebih hati-hati                           | Skema siap; UI belum ada |
+| Profil dasar      | Rentang usia, jenis kelamin (opsional)         | Pertanyaan lanjutan lebih sesuai                         | Skema siap; halaman Profil ada, form personalisasi belum |
+| Kondisi khusus    | Penyakit kronis, alergi, kehamilan (opsional)  | Ambang urgensi lebih hati-hati                           | Skema siap; form personalisasi belum |
 | Gaya komunikasi   | Ringkas/detail; santai/formal                  | Panjang & gaya feedback menyesuaikan                     | Skema siap; dikirim hanya bila payload mengisi |
 | Tingkat kecemasan | Check-in 1–5 sebelum & sesudah                 | Nada lebih menenangkan; opsi latihan napas               | **Aktif** |
 | Akses & biaya     | Perkiraan biaya (opsional), BPJS, jarak faskes | Rekomendasi jalur hemat yang realistis                   | Sebagian: `uses_bpjs`/`budget_pref` ada di skema, belum dipakai di UI |
@@ -243,16 +243,17 @@ Bila penjelasan berasal dari fallback rule-based, kartu menampilkan catatan tena
 - Alur guest penuh: cek gejala 5 langkah → hasil → chat lanjutan → surat dokter.
 - Red flag rule-based (7 aturan) yang memotong panggilan Gemini.
 - Triage 4 level dengan Gemini structured output + fallback rule-based + safety layer.
-- Riwayat tamu di perangkat, riwayat akun di database, impor riwayat setelah login + consent.
-- Login/daftar, consent, hapus akun, diary sederhana, dashboard, latihan napas.
+- Riwayat tamu sebagai titipan di perangkat; riwayat akun di database dengan timeline + filter; impor titipan dari Profil setelah login + consent.
+- Login/daftar, consent, halaman Profil, hapus akun, diary (tambah/hapus), dashboard, latihan napas.
+- Navigasi bawah khusus ponsel: Riwayat · Diary · Cek · Profil.
 - Chat streaming responsif dengan composer yang tumbuh mengikuti panjang ketikan.
 
 **Sebagian / belum**
 
 - Deteksi krisis mental otomatis belum ada; `/crisis` masih halaman statis.
-- Halaman pengaturan profil belum ada, sehingga data personalisasi belum bisa diisi pengguna.
+- Halaman Profil sudah ada untuk akun, privasi, dan impor; form personalisasi (usia, kondisi, alergi) belum tersedia.
 - Pengingat eskalasi dan analisis pola gejala belum diimplementasikan.
-- Diary belum menampilkan input mood dan belum bisa menghapus entri dari UI (API hapus sudah tersedia).
+- Diary belum menampilkan input mood; hapus entri sudah tersedia.
 - Rate limit aplikasi belum ada; perlindungan berasal dari batas panjang, anggaran waktu, dan cooldown Gemini.
 
 **Ketergantungan eksternal**

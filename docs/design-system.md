@@ -199,15 +199,24 @@ Font: **Inter** (fallback `system-ui`). Bahasa utama: **Indonesia**. Input memak
 ### 3.9 `DoctorSummaryModal` & `DoctorLetterModal`
 
 - `DoctorSummaryModal`: ringkasan gejala + tepat **3 pertanyaan** untuk tenaga kesehatan; aksi Salin.
-- `DoctorLetterModal`: surat lengkap (nomor dokumen, ringkasan klinis, insight chat, tanda bahaya, perawatan yang sudah dicoba, pertanyaan, penutup); aksi Salin, Cetak (`window.print()`), dan simpan ke dashboard.
+- `DoctorLetterModal`: surat lengkap (nomor dokumen, ringkasan klinis, insight chat, tanda bahaya, perawatan yang sudah dicoba, pertanyaan, penutup); aksi Salin, Cetak (`window.print()`), dan **Simpan & Selesai** (surat masuk ke Profil).
 
-### 3.10 `DiaryList` (form + daftar)
+### 3.10 `HistoryFilter` & `HistoryTimeline` (dashboard)
+
+- Header dashboard berisi judul riwayat dan tombol "Cek gejala"; tidak ada lagi hero, consent, surat, atau tombol keluar.
+- `HistoryFilter`: chip preset (7 hari, 30 hari, 3 bulan, tahun ini, semua), input rentang tanggal, pilihan jam lokal (bisa melewati tengah malam), dan chip urgensi. Di ponsel panel bisa dilipat; jumlah filter aktif tampil sebagai badge.
+- `HistoryTimeline`: kelompok per hari ("Hari ini", "Kemarin", tanggal lengkap), tiap entri menampilkan jam, durasi, badge urgensi, ringkasan alasan, dan tautan ringkasan dokter. Tombol "Muat lebih banyak" memakai cursor.
+- Tamu melihat kartu ajakan masuk, bukan timeline kosong. Pengguna login tanpa izin simpan melihat kartu "Riwayat akun belum aktif" dengan tautan ke Profil.
+- Skeleton dipakai saat memuat; empty state membedakan "belum ada riwayat" dan "tidak ada hasil untuk filter ini".
+
+### 3.11 `DiaryList` (form + daftar)
 
 - Form: catatan (textarea 3 baris), keparahan 1–5; mood tersedia di API tetapi belum ditampilkan di form.
 - Mode tamu menyimpan di `sessionStorage` (hilang saat tab ditutup); mode akun menyimpan ke database setelah consent.
+- Setiap entri punya tombol hapus dengan konfirmasi sebaris; header daftar menyediakan "Hapus semua" dengan konfirmasi. Penghapusan tetap tersedia meski izin simpan nonaktif.
 - Daftar kronologis; pengingat eskalasi otomatis belum diimplementasikan.
 
-### 3.11 Komponen dasar
+### 3.12 Komponen dasar
 
 `Button` (`primary` / `secondary` / `ghost` / `danger`; ukuran `sm` / `md`), `Card`, `Chip`, `Disclosure`, `AutoGrowTextarea`.
 
@@ -219,13 +228,14 @@ Tidak ada komponen `Input`, `Dialog`, `Toast`, atau `ConsentDialog` terpisah. Pe
 
 - **Mobile-first** (target utama mahasiswa/dewasa muda memakai ponsel).
 - Landing: grid satu kolom → dua kolom di `lg`, maksimum `max-w-6xl`.
-- Dashboard: satu kolom → `lg:grid-cols-[1.35fr_.8fr]`; kartu ringkasan `sm:grid-cols-3`.
+- Dashboard: timeline satu kolom → `lg:grid-cols-[minmax(0,1fr)_18rem]` untuk panel napas/pengingat.
+- Profil: satu kolom `max-w-4xl`; kartu identitas, izin, impor, surat, keluar, lalu hapus akun.
 - Alur cek gejala: `max-w-xl`, hasil `max-w-2xl`, diary `max-w-4xl`.
 - Chat: sidebar 320–384px hanya di `lg`; panel chat mengisi sisa tinggi (`h-dvh`, `overflow-hidden`) dengan area pesan yang bergulir sendiri.
 - Composer chat **tumbuh mengikuti panjang ketikan** (1 baris → maksimum 160px, lalu scroll) sehingga teks panjang tidak terpotong dan area percakapan tidak terdorong keluar layar.
 - Target sentuh minimal 44×44px (`min-h-11`, tombol ikon `h-11 w-11`).
-- Padding aman untuk perangkat berponi: `pb-[calc(...,env(safe-area-inset-bottom))]`.
-- Navigasi: Mulai cek · Riwayat · Diary · bantuan darurat (ikon telepon) · Masuk/Keluar.
+- Padding aman untuk perangkat berponi: `pb-[env(safe-area-inset-bottom)]` pada navigasi bawah.
+- Navigasi desktop: Riwayat · Diary · bantuan darurat · Mulai cek · avatar profil. Navigasi ponsel: **bottom navigation** Riwayat · Diary · Cek (tengah) · Profil; header hanya menyisakan logo, bantuan darurat, dan avatar/masuk. Bottom nav disembunyikan di `/checkin` dan `/auth`; footer hanya tampil di `md` ke atas.
 
 ---
 
@@ -277,12 +287,12 @@ Aturan tambahan:
 | Red flag fisik                             | `checkRedFlags` memotong panggilan AI → `RedFlagAlert` di atas hasil + tindakan darurat |
 | Tanda krisis mental                        | Tidak dideteksi otomatis; `/crisis` tersedia dari Navbar/Footer dan tautan `RedFlagAlert` |
 | Kecemasan tinggi                           | Nada lebih menenangkan; `BreathingExercise` ditawarkan bila skor ≥ 4               |
-| Guest                                      | Riwayat di perangkat; dashboard menjelaskan bahwa data tidak disimpan ke akun       |
-| Persetujuan simpan data                    | `ConsentCard` di dashboard; bahasa sederhana, bisa ditolak tanpa kehilangan fitur inti |
-| Login + riwayat tamu                       | Banner "Ada N pengecekan dari perangkat ini" → "Simpan ke akun" (otomatis bila izin sudah aktif) |
-| Logout                                     | Cache riwayat/surat milik akun dibersihkan; dashboard menampilkan skeleton lalu data tamu (bukan jejak akun) |
+| Guest                                      | Tidak ada timeline; dashboard menampilkan ajakan masuk. Hasil cek tetap tersimpan sementara di perangkat sebagai titipan impor |
+| Persetujuan simpan data                    | `ConsentCard` hanya di **Profil**; bahasa sederhana, bisa ditolak tanpa kehilangan fitur inti |
+| Login + riwayat tamu                       | Banner "Ada N pengecekan dari perangkat ini" di **Profil** → "Simpan ke akun" (bertahap, maks. 20 per permintaan) |
+| Logout                                     | Konfirmasi di Profil; cache riwayat/surat milik akun dibersihkan, lalu pengguna diarahkan ke beranda |
 | Gemini tidak tersedia                      | `ResultCard` menampilkan catatan "Penjelasan dari panduan standar TenangCek"; chat memakai jawaban fallback dengan catatan tenang |
-| Hapus data                                 | `DeleteAccountCard` dengan konfirmasi; hasil terlihat ("Akun dan datamu sudah dihapus") |
+| Hapus data                                 | `DeleteAccountCard` di Profil dengan konfirmasi; entri diary bisa dihapus satu per satu atau semua |
 | Hasil Google vs TenangCek (usability test) | Tidak perlu di UI produk; ditangani di protokol penelitian                          |
 
 ---

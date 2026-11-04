@@ -125,21 +125,69 @@ function readDoctorSummary(value: Prisma.JsonValue | null | undefined) {
   };
 }
 
+export interface TriageHistoryQuery {
+  /** Batas bawah waktu (inklusif). */
+  from?: Date;
+  /** Batas atas waktu (inklusif). */
+  to?: Date;
+  /** Filter level urgensi; kosong berarti semua. */
+  urgency?: UrgencyLevelDb[];
+  /** Cursor: hanya ambil baris yang lebih lama dari waktu ini. */
+  before?: Date;
+  limit?: number;
+}
+
+export interface TriageHistoryPage {
+  items: TriageHistoryItem[];
+  /** Jumlah seluruh baris yang cocok dengan filter tanggal/urgensi. */
+  total: number;
+  hasMore: boolean;
+  /** Waktu entri terakhir di halaman ini, untuk permintaan berikutnya. */
+  nextBefore: string | null;
+}
+
+const MAX_HISTORY_LIMIT = 200;
+
 /**
  * Riwayat triage milik pengguna, terbaru lebih dulu.
  * RLS tetap menegakkan isolasi lewat `withUserContext`.
+ *
+ * Filter tanggal dan urgensi dikerjakan di database. `total` dihitung tanpa
+ * cursor agar UI bisa menampilkan jumlah hasil untuk filter yang aktif.
  */
 export async function listTriageSessions(
   userId: string,
-  limit = 20
-): Promise<TriageHistoryItem[]> {
-  const take = Math.min(Math.max(limit, 1), 50);
+  query: TriageHistoryQuery = {}
+): Promise<TriageHistoryPage> {
+  const limit = Math.min(Math.max(query.limit ?? 20, 1), MAX_HISTORY_LIMIT);
 
-  const rows = await withUserContext(userId, (tx) =>
-    tx.symptomSession.findMany({
-      where: { userId },
+  const baseWhere: Prisma.SymptomSessionWhereInput = { userId };
+
+  if (query.from || query.to) {
+    const createdAt: Prisma.DateTimeFilter = {};
+    if (query.from) createdAt.gte = query.from;
+    if (query.to) createdAt.lte = query.to;
+    baseWhere.createdAt = createdAt;
+  }
+
+  if (query.urgency && query.urgency.length > 0) {
+    baseWhere.urgencyLevel = { in: query.urgency };
+  }
+
+  const pageWhere: Prisma.SymptomSessionWhereInput = { ...baseWhere };
+  if (query.before) {
+    pageWhere.createdAt = {
+      ...(baseWhere.createdAt as Prisma.DateTimeFilter | undefined),
+      lt: query.before,
+    };
+  }
+
+  const result = await withUserContext(userId, async (tx) => {
+    const total = await tx.symptomSession.count({ where: baseWhere });
+    const rows = await tx.symptomSession.findMany({
+      where: pageWhere,
       orderBy: { createdAt: 'desc' },
-      take,
+      take: limit + 1,
       select: {
         id: true,
         symptoms: true,
@@ -148,10 +196,15 @@ export async function listTriageSessions(
         createdAt: true,
         result: true,
       },
-    })
-  );
+    });
 
-  return rows.map((row) => ({
+    return { total, rows };
+  });
+
+  const hasMore = result.rows.length > limit;
+  const rows = hasMore ? result.rows.slice(0, limit) : result.rows;
+
+  const items = rows.map((row) => ({
     id: row.id,
     symptomName: readJsonString(row.symptoms, 'mainSymptom') ?? 'Pengecekan gejala',
     duration: readJsonString(row.symptoms, 'duration'),
@@ -160,6 +213,13 @@ export async function listTriageSessions(
     createdAt: row.createdAt.toISOString(),
     doctorSummary: readDoctorSummary(row.result),
   }));
+
+  return {
+    items,
+    total: result.total,
+    hasMore,
+    nextBefore: hasMore && items.length > 0 ? items[items.length - 1].createdAt : null,
+  };
 }
 
 /** Tanggal dari klien tidak boleh di masa depan; jatuh ke waktu sekarang. */

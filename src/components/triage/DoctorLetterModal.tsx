@@ -103,7 +103,7 @@ ${letter.doctorNoteClosing}
     } catch (e) {
       console.warn('Gagal menyimpan surat ke cache', e);
     }
-    router.push('/dashboard');
+    router.push('/profile');
   };
 
   return (

@@ -14,7 +14,7 @@ import Button, { buttonClass } from '@/components/ui/Button';
 import AutoGrowTextarea from '@/components/ui/AutoGrowTextarea';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAuthHeaders } from '@/lib/supabase/client';
-import { mergeHistory, prependLocalHistory, readLocalHistory, type HistoryEntry } from '@/lib/triage/localHistory';
+import { prependLocalHistory, type HistoryEntry } from '@/lib/triage/localHistory';
 import { fetchServerHistory } from '@/lib/triage/historyClient';
 
 interface StepQuestion {
@@ -95,29 +95,27 @@ export default function StepChat() {
   const [cacheWarning, setCacheWarning] = useState<string | null>(null);
   const [lastCheck, setLastCheck] = useState<HistoryEntry | null>(null);
   const [showLastCheck, setShowLastCheck] = useState(true);
+  const [saveState, setSaveState] = useState<'account' | 'guest' | 'not_saved' | 'save_failed'>('not_saved');
   const [view, setView] = useState<View>('form');
 
   const step = STEPS[currentStepIndex];
 
   // Ringkasan pengecekan terakhir sebagai konteks, bukan pengubah jawaban.
-  // Tunggu status auth selesai agar tidak membaca kunci yang salah. Untuk
-  // pengguna login, riwayat akun di perangkat lain ikut diambil dari server.
+  // Hanya pengguna login yang melihat riwayat; tamu tidak punya timeline.
   useEffect(() => {
     if (isAuthLoading) return;
+
+    if (!user) {
+      setLastCheck(null);
+      return;
+    }
 
     let cancelled = false;
 
     const loadLastCheck = async () => {
-      let entries = mergeHistory(readLocalHistory(user?.id ?? null), readLocalHistory(null));
-
-      if (user) {
-        const result = await fetchServerHistory();
-        if (result?.mode === 'account' && result.items.length > 0) {
-          entries = mergeHistory(result.items, entries);
-        }
-      }
-
-      if (!cancelled) setLastCheck(entries[0] ?? null);
+      const result = await fetchServerHistory({ limit: 1 });
+      if (cancelled) return;
+      setLastCheck(result?.mode === 'account' ? result.items[0] ?? null : null);
     };
 
     void loadLastCheck();
@@ -193,9 +191,11 @@ export default function StepChat() {
       setResultSource(json.meta?.aiSource === 'gemini' ? 'gemini' : 'rule_based');
       setView('result');
 
-      // Riwayat lokal: kunci ditentukan dari identitas yang sudah pasti
-      // (`user?.id` hanya setelah auth selesai), supaya data akun tidak pernah
-      // tertulis ke kunci tamu dan sebaliknya.
+      const persisted = json.meta?.persisted === true;
+
+      // Hanya tamu yang menulis cache perangkat: entri itu adalah titipan yang
+      // akan diimpor setelah login. Pengguna login memakai database sebagai
+      // sumber tunggal agar tidak ada salinan ganda di perangkat.
       const historyEntry: HistoryEntry = {
         id: json.meta?.sessionId ? `session-${json.meta.sessionId}` : `local-${Date.now()}`,
         sessionId: json.meta?.sessionId,
@@ -207,14 +207,27 @@ export default function StepChat() {
         doctorSummary: json.data.doctorSummary ?? null,
       };
 
-      const cacheSaved = prependLocalHistory(user?.id ?? null, historyEntry);
-      setLastCheck(historyEntry);
-      setShowLastCheck(true);
-      setCacheWarning(
-        cacheSaved
-          ? null
-          : 'Riwayat pengecekan belum bisa disimpan di perangkat ini. Hasil tetap bisa dilihat sekarang, tetapi mungkin tidak muncul di dashboard.'
-      );
+      if (!user) {
+        const cacheSaved = prependLocalHistory(null, historyEntry);
+        setSaveState('guest');
+        setCacheWarning(
+          cacheSaved
+            ? null
+            : 'Riwayat belum bisa disimpan di perangkat ini. Hasil tetap bisa dilihat sekarang, tetapi tidak akan ikut saat kamu masuk.'
+        );
+      } else if (persisted) {
+        setLastCheck(historyEntry);
+        setShowLastCheck(true);
+        setSaveState('account');
+        setCacheWarning(null);
+      } else {
+        setSaveState(
+          json.meta?.reason === 'save_failed' || json.meta?.reason === 'unavailable'
+            ? 'save_failed'
+            : 'not_saved'
+        );
+        setCacheWarning(null);
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Terjadi gangguan jaringan.';
       setErrorMessage(`${message} Coba lagi, atau periksa ke puskesmas bila keluhan berlanjut.`);
@@ -226,6 +239,8 @@ export default function StepChat() {
   const handleReset = () => {
     setResult(null);
     setResultSource('rule_based');
+    setSaveState('not_saved');
+    setCacheWarning(null);
     setView('form');
     setCurrentStepIndex(0);
     setFormData({
@@ -286,9 +301,21 @@ export default function StepChat() {
           </div>
 
           <p className="mt-3 text-center text-xs leading-5 text-ink-400">
-            {user
-              ? 'Hasil dan riwayat tersimpan di akunmu bila izin penyimpanan aktif, dan selalu tersalin ke perangkat ini.'
-              : 'Mode tamu: hasil hanya tersimpan di browser perangkat ini dan tidak ditulis ke database.'}
+            {saveState === 'account'
+              ? 'Hasil ini tersimpan di akunmu dan masuk ke riwayat.'
+              : saveState === 'guest'
+                ? 'Mode tamu: hasil disimpan sementara di perangkat ini dan akan masuk ke akun setelah kamu masuk.'
+                : saveState === 'save_failed'
+                  ? 'Hasil sudah tampil, tetapi belum berhasil disimpan ke akun. Coba cek lagi nanti.'
+                  : (
+                    <>
+                      Izin simpan belum aktif, jadi hasil ini tidak masuk riwayat.{' '}
+                      <Link href="/profile#privasi" className="font-semibold text-brand-600 underline underline-offset-2">
+                        Aktifkan di Profil
+                      </Link>
+                      .
+                    </>
+                  )}
           </p>
 
           {cacheWarning && (

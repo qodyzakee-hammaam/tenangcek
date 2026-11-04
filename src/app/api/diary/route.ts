@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { errorResponse } from '@/lib/api/response';
 import { authenticateRequest, requireConsent } from '@/lib/supabase/auth';
-import { createDiary, deleteDiary, listDiary } from '@/lib/db/repository/diary';
+import { createDiary, deleteAllDiary, deleteDiary, listDiary } from '@/lib/db/repository/diary';
 
 export const dynamic = 'force-dynamic';
 
@@ -111,7 +111,23 @@ export async function DELETE(request: Request) {
     return errorResponse(auth.status, auth.error.code, auth.error.message);
   }
 
-  const id = new URL(request.url).searchParams.get('id');
+  const params = new URL(request.url).searchParams;
+  const deleteAll = params.get('all') === '1';
+
+  if (deleteAll) {
+    try {
+      const deletedCount = await deleteAllDiary(auth.userId);
+      return NextResponse.json({ success: true, deleted: deletedCount });
+    } catch {
+      return errorResponse(
+        500,
+        'diary_delete_failed',
+        'Catatan belum bisa dihapus semua. Coba lagi.'
+      );
+    }
+  }
+
+  const id = params.get('id');
   if (!id) {
     return errorResponse(400, 'missing_id', 'Catatan yang ingin dihapus belum dipilih.');
   }

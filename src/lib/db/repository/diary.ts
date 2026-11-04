@@ -82,3 +82,14 @@ export async function deleteDiary(userId: string, id: string): Promise<boolean> 
     return deleted.count > 0;
   });
 }
+
+/**
+ * Menghapus seluruh diary milik pengguna.
+ * `deleteMany` dengan `userId` menjaga batas kepemilikan; RLS tetap aktif.
+ */
+export async function deleteAllDiary(userId: string): Promise<number> {
+  return withUserContext(userId, async (tx) => {
+    const deleted = await tx.diaryEntry.deleteMany({ where: { userId } });
+    return deleted.count;
+  });
+}

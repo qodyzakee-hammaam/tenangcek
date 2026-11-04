@@ -72,7 +72,7 @@ export default function ConsentCard() {
           <p className="mt-1 text-xs leading-5 text-ink-400">
             {consented
               ? 'Aktif. Hasil cek gejala, check-in kecemasan, dan diary tersimpan di akunmu dan hanya bisa diakses olehmu.'
-              : 'Nonaktif. Kamu tetap bisa memakai TenangCek, tetapi riwayat hanya tersimpan di perangkat ini.'}
+              : 'Nonaktif. Riwayat akun disembunyikan dan pengecekan baru tidak disimpan ke akun. Kamu tetap bisa memakai TenangCek sebagai tamu.'}
           </p>
         </div>
       </div>
@@ -93,8 +93,8 @@ export default function ConsentCard() {
       </button>
 
       <p className="mt-3 text-[11px] leading-5 text-ink-400">
-        Kamu bisa mematikan izin ini kapan saja. Data yang sudah tersimpan tetap bisa kamu hapus dari
-        diary, atau dengan menghapus akun.
+        Kamu bisa mematikan izin ini kapan saja. Saat nonaktif, riwayat lama tidak ditampilkan.
+        Data yang sudah tersimpan tetap bisa dihapus lewat diary atau dengan menghapus akun.
       </p>
 
       {errorMessage && (

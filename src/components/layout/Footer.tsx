@@ -3,7 +3,7 @@ import { HeartPulse, ShieldCheck } from 'lucide-react';
 
 export default function Footer() {
   return (
-    <footer className="mt-auto border-t border-border bg-surface py-7 text-xs text-ink-400">
+    <footer className="mt-auto hidden border-t border-border bg-surface py-7 text-xs text-ink-400 md:block">
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
@@ -19,7 +19,7 @@ export default function Footer() {
             </Link>
             <span className="flex items-center gap-1.5">
               <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-brand-600" aria-hidden="true" />
-              Riwayat tersimpan di browser perangkat ini.
+              Data kesehatan hanya dibuka sesuai izinmu.
             </span>
           </div>
         </div>

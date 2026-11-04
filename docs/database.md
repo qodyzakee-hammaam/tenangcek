@@ -215,9 +215,9 @@ Catatan:
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | Persetujuan    | Tulis ke `symptom_sessions`, `checkins`, `diary_entries` hanya bila `profiles.consent_health_data = true` (dicek di server lewat `requireConsent`) |
 | Hapus data     | `DELETE /api/account/delete`: hapus data kesehatan lewat Prisma, lalu hapus `auth.users` (trigger juga membersihkan data bila akun dihapus dari dashboard Supabase) |
-| Hapus sebagian | Pengguna dapat menghapus entri diary satu per satu (`DELETE /api/diary?id=...`). Riwayat triage belum punya tombol hapus per sesi            |
+| Hapus sebagian | Pengguna dapat menghapus entri diary satu per satu (`DELETE /api/diary?id=...`) atau seluruh diary (`DELETE /api/diary?all=1`). Riwayat triage belum punya tombol hapus per sesi |
 | Retensi        | Belum ada kedaluwarsa otomatis; data tersimpan sampai pengguna menghapusnya. Kebijakan retensi final perlu ditulis di halaman privasi        |
-| Guest          | Riwayat triage di `localStorage`, diary di `sessionStorage`; tidak ada tulis DB. Riwayat tamu bertahan sampai dibersihkan; diary hilang saat tab ditutup |
+| Guest          | Riwayat triage di `localStorage` sebagai titipan impor, diary di `sessionStorage`; tidak ada tulis DB. Timeline tidak ditampilkan untuk tamu; impor dilakukan dari Profil setelah login + consent |
 
 ---
 
@@ -246,8 +246,15 @@ Prinsip penyimpanan:
 
 | Endpoint                                    | Method | Perilaku                                                                                                              |
 | ------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------- |
-| `src/app/api/triage/history/route.ts`       | `GET`  | `requireConsent`; tamu → `mode: "guest"`, belum consent → `mode: "consent_required"`, selain itu `mode: "account"` (maks. 20 sesi terbaru) |
+| `src/app/api/triage/history/route.ts`       | `GET`  | `requireConsent`; tamu → `mode: "guest"`, belum consent → `mode: "consent_required"`, selain itu `mode: "account"`. Mendukung `from`, `to`, `urgency`, `before`, `limit` (1–200) dan mengembalikan `meta.total`/`meta.hasMore`/`meta.nextBefore` |
 | `src/app/api/triage/history/import/route.ts`| `POST` | Impor maks. 20 entri dari cache perangkat; **wajib** persetujuan (`requireConsent`)                                   |
+
+Catatan filter riwayat:
+
+- `from`/`to` adalah instant ISO; batas hari dihitung di zona waktu perangkat lalu dikirim ke server.
+- `urgency` berisi daftar level UI dipisah koma dan dipetakan ke enum database lewat `src/lib/db/urgency.ts`.
+- `before` adalah cursor `created_at` untuk halaman berikutnya; `total` dihitung tanpa cursor agar sesuai jumlah hasil filter.
+- Filter jam tidak dikirim ke server karena bergantung pada zona waktu lokal; client memfilternya setelah data dimuat.
 
 Catatan impor dari perangkat:
 
@@ -295,7 +302,7 @@ Catatan implementasi:
 - Enum di database memakai istilah Inggris (`monitor`/`scheduled`/`urgent`/`emergency`); UI tetap memakai istilah Indonesia. Konversi hanya lewat `src/lib/db/urgency.ts`.
 - Sesi Supabase disimpan di `localStorage`, sehingga Route Handler menerima access token lewat header `Authorization: Bearer <token>`. Client yang menulis data wajib mengirim header ini.
 - `consent_at` diisi oleh trigger `sync_consent_at`, bukan oleh client.
-- Mode tamu: `/api/diary` mengembalikan `mode: "guest"` dan client menyimpan catatan di `sessionStorage`; `/api/triage/history` mengembalikan `mode: "guest"` dan riwayat tamu dibaca dari `localStorage`. Tidak ada tulis DB.
+- Mode tamu: `/api/diary` mengembalikan `mode: "guest"` dan client menyimpan catatan di `sessionStorage`; `/api/triage/history` mengembalikan `mode: "guest"` dan titipan riwayat tamu dibaca dari `localStorage` hanya untuk diimpor lewat Profil. Tidak ada tulis DB.
 - Semua skema hanya ada di folder `prisma/`; tidak ada folder `supabase/` atau `supabase/schema.sql` yang menjadi sumber kedua.
 
 ---

@@ -82,7 +82,8 @@ TenangCek/
 │  │  ├─ globals.css                     # @theme: token warna/radius/font
 │  │  ├─ auth/page.tsx                   # masuk / daftar
 │  │  ├─ checkin/page.tsx                # alur cek gejala
-│  │  ├─ dashboard/page.tsx              # riwayat, consent, surat tersimpan
+│  │  ├─ dashboard/page.tsx              # timeline riwayat + filter tanggal/jam/urgensi
+│  │  ├─ profile/page.tsx                # profil, izin, impor riwayat, surat, keluar/hapus
 │  │  ├─ diary/page.tsx                  # symptom diary
 │  │  ├─ crisis/page.tsx                 # layar bantuan darurat statis
 │  │  └─ api/
@@ -100,11 +101,11 @@ TenangCek/
 │  │  ├─ calm/BreathingExercise.tsx
 │  │  ├─ crisis/CrisisScreen.tsx
 │  │  ├─ diary/DiaryList.tsx
-│  │  ├─ layout/{ShellLayout,Navbar,Footer,DisclaimerBanner}.tsx
-│  │  ├─ profile/{ConsentCard,DeleteAccountCard}.tsx
+│  │  ├─ layout/{ShellLayout,Navbar,BottomNav,Footer,DisclaimerBanner}.tsx
+│  │  ├─ profile/{ProfileView,ConsentCard,DeleteAccountCard}.tsx
 │  │  ├─ result/{ResultCard,UrgencyBadge,CostPathCard,Disclaimer}.tsx
 │  │  ├─ support/AnxietyCheckin.tsx
-│  │  ├─ triage/{StepChat,InteractiveAiChat,RedFlagAlert,DoctorSummaryModal,DoctorLetterModal}.tsx
+│  │  ├─ triage/{StepChat,InteractiveAiChat,RedFlagAlert,DoctorSummaryModal,DoctorLetterModal,HistoryFilter,HistoryTimeline}.tsx
 │  │  └─ ui/{Button,Card,Chip,Disclosure,AutoGrowTextarea}.tsx
 │  ├─ contexts/AuthContext.tsx
 │  ├─ content/{emergency,costPath}.ts    # teks statis: nomor darurat, jalur biaya
@@ -114,7 +115,7 @@ TenangCek/
 │  │  ├─ gemini/{client,prompts,schemas,generate,chatStream,resilience}.ts
 │  │  ├─ rules/{redFlags,safetyLayer}.ts
 │  │  ├─ supabase/{client,server,auth}.ts
-│  │  ├─ triage/{localHistory,historyClient}.ts
+│  │  ├─ triage/{localHistory,historyClient,format}.ts
 │  │  ├─ ui/{cn,urgency}.ts
 │  │  └─ utils/formatters.ts
 │  ├─ generated/prisma/                  # output Prisma Client (jangan diedit)
@@ -268,29 +269,32 @@ Log hanya memuat nama model, status, jenis error, dan durasi — tidak pernah is
 
 | Mode                      | Perilaku                                                                                                |
 | ------------------------- | ------------------------------------------------------------------------------------------------------- |
-| **Guest**                 | Seluruh alur check-in → hasil → chat → diary berjalan; riwayat di `localStorage`, diary di `sessionStorage`; tidak ada tulis DB |
+| **Guest**                 | Seluruh alur check-in → hasil → chat → diary berjalan; hasil cek disimpan sementara di `localStorage` sebagai titipan impor, diary di `sessionStorage`; tidak ada tulis DB. Dashboard **tidak menampilkan timeline**, hanya ajakan masuk. |
 | **Login (Supabase Auth)** | Profil, riwayat, check-in, dan diary tersimpan **hanya bila `consent_health_data = true`**               |
 
 ### 7.1 Riwayat pengecekan (sumber data)
 
 | Kondisi                 | Sumber riwayat                                                                                                    |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Tamu                    | `localStorage` kunci `tenangcek_sessions_guest`; hanya di perangkat ini                                            |
-| Login + persetujuan     | `GET /api/triage/history` (`mode: "account"`) digabung dengan cache perangkat dan didedupe `id`                    |
-| Login tanpa persetujuan | `GET /api/triage/history` → `mode: "consent_required"`; dashboard hanya menampilkan cache perangkat                |
+| Tamu                    | `localStorage` kunci `tenangcek_sessions_guest`; hanya dipakai sebagai titipan impor, tidak dirender sebagai timeline |
+| Login + persetujuan     | `GET /api/triage/history` (`mode: "account"`); sumber tunggal adalah server, tanpa cache akun di perangkat          |
+| Login tanpa persetujuan | `GET /api/triage/history` → `mode: "consent_required"`; riwayat lama disembunyikan sampai izin diaktifkan kembali  |
 
 - Kunci cache ditentukan setelah status auth **pasti** (`AuthContext.isLoading === false`), bukan dari tebakan `user?.id || 'guest'` saat submit — supaya data akun tidak tertulis ke kunci tamu.
+- Pengguna login **tidak menulis cache perangkat**; entri baru langsung dibaca dari server agar tidak ada salinan ganda.
 - Saat logout, `clearAccountHistories()` dan `clearAccountLetters()` menghapus semua kunci `tenangcek_sessions_<uuid>` dan `tenangcek_doctor_letters_<uuid>` di perangkat. Kunci tamu tidak disentuh.
-- Riwayat tamu yang ditemukan setelah login **ditampilkan** dengan label "dari perangkat ini". Bila consent sudah aktif, impor berjalan otomatis satu kali; bila belum, pengguna menekan "Aktifkan izin" lalu "Simpan ke akun".
-- Impor lewat `POST /api/triage/history/import`: maks. 20 entri, wajib consent, urgensi disimpan apa adanya, `rule_floor = NULL`, `red_flag_triggered = true` hanya untuk `emergency`, `created_at` tidak boleh di masa depan.
+- Riwayat tamu diimpor lewat `POST /api/triage/history/import` dari **halaman Profil** setelah login + consent. Endpoint menerima maks. 20 entri per permintaan; UI mengirim bertahap bila titipan lebih banyak. Urgensi disimpan apa adanya, `rule_floor = NULL`, `red_flag_triggered = true` hanya untuk `emergency`, `created_at` tidak boleh di masa depan. Setelah berhasil, entri tersebut dihapus dari cache tamu.
+- Riwayat akun adalah **timeline berkelanjutan** yang dikelompokkan per hari lokal. Filter tanggal (preset/rentang) dan urgensi dikerjakan di server; filter jam dikerjakan di client memakai zona waktu perangkat, termasuk rentang yang melewati tengah malam.
+- Halaman riwayat memakai pagination cursor (`before` + `limit`, maks. 200) dan menampilkan total hasil filter.
 - Selama status auth/riwayat dimuat, dashboard menampilkan **skeleton** — bukan "belum ada riwayat" dan bukan data pemilik sebelumnya.
-- Surat dokter disimpan di `localStorage` dengan kunci `tenangcek_doctor_letters_<user id | guest>` dan ikut dibersihkan saat logout karena isinya data kesehatan.
-- Alur cek gejala menampilkan kartu "Pengecekan terakhir" sebagai konteks; kartu ini tidak mengubah jawaban maupun tingkat urgensi.
+- Surat dokter disimpan di `localStorage` dengan kunci `tenangcek_doctor_letters_<user id | guest>`, ditampilkan di **Profil**, dan ikut dibersihkan saat logout karena isinya data kesehatan.
+- Alur cek gejala menampilkan kartu "Pengecekan terakhir" hanya untuk pengguna login, sebagai konteks; kartu ini tidak mengubah jawaban maupun tingkat urgensi.
 
 ### 7.2 Persetujuan & penghapusan
 
 - Tulis data kesehatan (`POST /api/triage`, `POST /api/diary`, `POST/PATCH /api/checkins`, impor riwayat) melewati `requireConsent`.
-- `PATCH /api/profile/consent` mengaktifkan/mematikan izin; `consent_at` diisi trigger database, bukan client.
+- `PATCH /api/profile/consent` mengaktifkan/mematikan izin; `consent_at` diisi trigger database, bukan client. Saat izin dimatikan, endpoint baca mengembalikan `consent_required` dan dashboard menyembunyikan riwayat lama.
+- `DELETE /api/diary?id=...` menghapus satu entri; `DELETE /api/diary?all=1` menghapus seluruh diary milik pengguna. Keduanya tidak memerlukan consent.
 - `DELETE /api/account/delete` menghapus data kesehatan lewat Prisma lalu menghapus akun lewat `auth.admin.deleteUser` (butuh `SUPABASE_SERVICE_ROLE_KEY`, hanya server).
 - Hanya `anon key` yang ada di browser; `service_role` tidak pernah dikirim ke client.
 
